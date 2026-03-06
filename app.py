@@ -426,19 +426,82 @@ html,body{
     grid-template-columns:1fr;
   }
 }
+
+
+
+.mobile-map-popup{
+  position:fixed;
+  inset:0;
+  background:#ffffff;
+  z-index:2000;
+  display:none;
+  flex-direction:column;
+}
+
+.mobile-map-header{
+  height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 16px;
+  border-bottom:1px solid #e5e7eb;
+  font-weight:700;
+}
+
+.mobile-map-close{
+  border:none;
+  background:#ef4444;
+  color:#ffffff;
+  padding:6px 10px;
+  border-radius:6px;
+}
+
+@media (min-width:901px){
+
+  .mobile-map-popup{
+    display:none !important;
+  }
+
+}
+
+.mobile-map{
+  flex:1;
+}
+
+@media(min-width:901px){
+  .mobile-map-popup{
+    display:none !important;
+  }
+}
+
+#locBtn{
+position:absolute;
+bottom:20px;
+right:20px;
+z-index:1000;
+background:#2563eb;
+color:white;
+border:none;
+padding:10px 14px;
+border-radius:10px;
+font-size:14px;
+cursor:pointer;
+box-shadow:0 4px 10px rgba(0,0,0,0.2);
+}
 </style>
 </head>
 <body>
 
 <div class="page">
   <aside class="sidebar">
-    <div class="brand">
-      <div class="logo">⚠</div>
-      <div>
-        <h1>위험지역 찾기</h1>
-        <p>엑셀 기반 위험정보 지도</p>
-      </div>
-    </div>
+   <div class="brand">
+
+  <div>
+    <h1>위험지역 찾기</h1>
+    <p>엑셀 기반 위험정보 지도</p>
+  </div>
+
+</div>
 
     <div class="card">
       <h3>조회 조건</h3>
@@ -456,13 +519,26 @@ html,body{
       <label class="label">3. 구분</label>
       <div class="check-grid" id="categoryBox"></div>
 
-      <div class="btn-row">
+            <div class="btn-row">
         <button class="btn primary" onclick="loadData()">조회</button>
         <button class="btn secondary" onclick="resetFilters()">초기화</button>
       </div>
-    </div>
 
-    <div class="card">
+      <button class="btn primary" style="margin-top:10px;" onclick="findNearest()">
+  내 주변 위험지역 찾기
+</button>
+
+<button class="btn secondary" style="margin-top:8px;" onclick="findRadius(1)">
+1km 위험지역
+</button>
+
+<button class="btn secondary" style="margin-top:8px;" onclick="findRadius(3)">
+3km 위험지역
+</button>
+
+</div>
+
+<div class="card">
       <h3>조회 결과</h3>
       <div class="summary">
         <div class="summary-box">
@@ -500,6 +576,7 @@ html,body{
 
   <main class="map-wrap">
     <div id="map"></div>
+    <button id="locBtn">📍 내 위치</button>
     <div class="top-badge">모바일 / PC 지원</div>
     <div class="loading" id="loadingBox">데이터를 불러오는 중입니다...</div>
   </main>
@@ -628,8 +705,17 @@ async function updateTowns(){
 }
 
 async function loadData(){
+
   setLoading(true);
-  markerGroup.clearLayers();
+
+  if(!isMobile()){
+    markerGroup.clearLayers();
+  }
+
+  if(isMobile()){
+    openMobileMap();
+  }
+
 
   const city = document.getElementById("city").value;
   const town = document.getElementById("town").value;
@@ -650,8 +736,11 @@ async function loadData(){
     const bounds = [];
 
     data.forEach(item => {
-      const icon = buildMarkerIcon(item.마커색상);
-      const marker = L.marker([item.위도, item.경도], { icon });
+
+  if(!isMobile()){
+
+    const icon = buildMarkerIcon(item.마커색상);
+    const marker = L.marker([item.위도, item.경도], { icon });
 
       const popupHtml = `
         <div class="popup-wrap">
@@ -696,18 +785,32 @@ async function loadData(){
 
       marker.bindPopup(popupHtml, { maxWidth: 290 });
       markerGroup.addLayer(marker);
-      bounds.push([item.위도, item.경도]);
-    });
+bounds.push([item.위도, item.경도]);
 
-    if(bounds.length > 0){
-      map.fitBounds(bounds, { padding:[40,40] });
-    }else{
-      map.setView([34.85, 126.90], 9);
-      alert("조건에 맞는 데이터가 없습니다.");
-    }
+}
+
+});
+
+if(!isMobile()){
+
+  if(bounds.length > 0){
+    map.fitBounds(bounds, { padding:[40,40] });
+  }else{
+    map.setView([34.85, 126.90], 9);
+    alert("조건에 맞는 데이터가 없습니다.");
+  }
+
+}
+
+if(isMobile()){
+  syncToMobileMap(data);
+}
+
   }catch(e){
     alert("데이터를 불러오는 중 오류가 발생했습니다.");
     console.error(e);
+
+
   }finally{
     setLoading(false);
   }
@@ -728,9 +831,13 @@ window.addEventListener("load", function(){
 
 document.getElementById("city").addEventListener("change", updateTowns);
 
-createCategoryChecks();
-loadMeta().then(loadData);
+window.addEventListener("DOMContentLoaded", function(){
 
+  createCategoryChecks();
+
+  loadMeta().then(loadData);
+
+});
 // ===== 브라우저 닫힘 감지용 heartbeat =====
 function heartbeat(){
   fetch("/heartbeat", {method:"POST"}).catch(()=>{});
@@ -741,7 +848,361 @@ heartbeat();
 window.addEventListener("beforeunload", function(){
   navigator.sendBeacon("/bye");
 });
+
+
+
+function isMobile(){
+  return window.innerWidth < 900;
+}
+
+function openMobileMap(){
+  if(!isMobile()) return;
+
+  const popup = document.getElementById("mobileMapPopup");
+  popup.style.display = "flex";
+
+  const mapDiv = document.getElementById("mobileMap");
+
+  if(!window.mobileLeafletMap){
+    window.mobileLeafletMap = L.map(mapDiv).setView([34.85, 126.90], 9);
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxZoom: 19 }
+    ).addTo(window.mobileLeafletMap);
+
+    window.mobileMarkerGroup = L.markerClusterGroup({
+      showCoverageOnHover:false,
+      spiderfyOnMaxZoom:true,
+      disableClusteringAtZoom:15
+    });
+
+    window.mobileLeafletMap.addLayer(window.mobileMarkerGroup);
+  }
+
+  setTimeout(()=>{
+    window.mobileLeafletMap.invalidateSize();
+  }, 200);
+}
+
+function closeMobileMap(){
+  document.getElementById("mobileMapPopup").style.display = "none";
+}
+
+function syncToMobileMap(items, userLat=null, userLng=null, radiusMeter=null){
+  if(!isMobile()) return;
+
+  openMobileMap();
+
+  window.mobileMarkerGroup.clearLayers();
+
+  const bounds = [];
+
+  if(userLat !== null && userLng !== null){
+    const userMarker = L.circleMarker(
+      [userLat, userLng],
+      {
+        radius:8,
+        color:"#2563eb",
+        fillColor:"#2563eb",
+        fillOpacity:1
+      }
+    );
+    window.mobileMarkerGroup.addLayer(userMarker);
+    bounds.push([userLat, userLng]);
+
+    if(radiusMeter){
+      const circle = L.circle(
+        [userLat, userLng],
+        {
+          radius: radiusMeter,
+          color:"#2563eb",
+          fillColor:"#2563eb",
+          fillOpacity:0.08
+        }
+      );
+      window.mobileMarkerGroup.addLayer(circle);
+    }
+  }
+
+  items.forEach(item=>{
+    const icon = buildMarkerIcon(item.마커색상);
+
+    const marker = L.marker([item.위도, item.경도], { icon });
+
+    const popupHtml = `
+      <div class="popup-wrap">
+        <img class="popup-img" src="${escapeHtml(item.사진URL)}" alt="현장 사진">
+
+        <div class="popup-title">${escapeHtml(item.구분)}</div>
+
+        <div class="popup-meta">
+          순번: ${escapeHtml(item.순번)}<br>
+          시군구: ${escapeHtml(item.시군구)}<br>
+          읍면동: ${escapeHtml(item.읍면동)}<br>
+          날짜: ${escapeHtml(item.날짜)}<br>
+          주소: ${escapeHtml(item.주소)}
+        </div>
+
+        <div class="popup-desc">
+          ${escapeHtml(item.사고설명)}
+        </div>
+
+        <div style="margin-top:10px;">
+          <a
+            href="https://map.kakao.com/link/to/위험지역,${item.위도},${item.경도}"
+            target="_blank"
+            style="
+              display:block;
+              text-align:center;
+              background:#FEE500;
+              color:#000;
+              font-weight:700;
+              padding:8px;
+              border-radius:8px;
+              text-decoration:none;
+              font-size:13px;
+            ">
+            카카오맵 길찾기
+          </a>
+        </div>
+      </div>
+    `;
+
+    marker.bindPopup(popupHtml, { maxWidth: 290 });
+    window.mobileMarkerGroup.addLayer(marker);
+    bounds.push([item.위도, item.경도]);
+  });
+
+  setTimeout(()=>{
+    window.mobileLeafletMap.invalidateSize();
+
+    if(bounds.length > 0){
+      window.mobileLeafletMap.fitBounds(bounds, { padding:[40,40] });
+    }else{
+      window.mobileLeafletMap.setView([34.85, 126.90], 9);
+    }
+  }, 250);
+}
+
+
+  
+
+
+
+
+async function findNearest(){
+
+  if(!navigator.geolocation){
+    alert("GPS를 지원하지 않는 기기입니다.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+
+    const res = await fetch("/data");
+    const data = await res.json();
+
+    markerGroup.clearLayers();
+
+    L.circleMarker(
+      [lat, lng],
+      {
+        radius:8,
+        color:"#2563eb",
+        fillColor:"#2563eb",
+        fillOpacity:1
+      }
+    ).addTo(markerGroup);
+
+    let nearest = null;
+    let minDist = Infinity;
+
+    data.forEach(item => {
+
+      const dist = map.distance(
+        [lat, lng],
+        [item.위도, item.경도]
+      );
+
+      if(dist < minDist){
+        minDist = dist;
+        nearest = item;
+      }
+
+    });
+
+    if(!nearest){
+      alert("주변 위험지역을 찾지 못했습니다.");
+      return;
+    }
+
+    const icon = buildMarkerIcon(nearest.마커색상);
+
+    const marker = L.marker(
+      [nearest.위도, nearest.경도],
+      { icon }
+    );
+
+    marker.bindPopup(`
+      <div style="font-size:13px;">
+      <b>가장 가까운 위험지역</b><br>
+      ${nearest.구분}<br>
+      ${nearest.시군구} ${nearest.읍면동}<br>
+      ${nearest.주소}
+      </div>
+    `).openPopup();
+
+    markerGroup.addLayer(marker);
+
+    map.fitBounds([
+      [lat, lng],
+      [nearest.위도, nearest.경도]
+    ], { padding:[40,40] });
+
+    document.getElementById("countTotal").textContent = 1;
+    document.getElementById("countCity").textContent = "내 주변";
+
+    if(isMobile()){
+      syncToMobileMap([nearest], lat, lng, null);
+    }
+
+  });
+
+}
+    
+
+async function findRadius(km){
+
+  if(!navigator.geolocation){
+    alert("GPS를 지원하지 않는 기기입니다.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+
+    const res = await fetch("/data");
+    const data = await res.json();
+
+    markerGroup.clearLayers();
+
+    const radiusMeter = km * 1000;
+
+    L.circleMarker(
+      [lat, lng],
+      {
+        radius:8,
+        color:"#2563eb",
+        fillColor:"#2563eb",
+        fillOpacity:1
+      }
+    ).addTo(markerGroup);
+
+    L.circle(
+      [lat, lng],
+      {
+        radius: radiusMeter,
+        color:"#2563eb",
+        fillColor:"#2563eb",
+        fillOpacity:0.08
+      }
+    ).addTo(markerGroup);
+
+    const filtered = [];
+
+    data.forEach(item => {
+
+      const dist = map.distance(
+        [lat, lng],
+        [item.위도, item.경도]
+      );
+
+      if(dist <= radiusMeter){
+
+        filtered.push(item);
+
+        const icon = buildMarkerIcon(item.마커색상);
+
+        const marker = L.marker(
+          [item.위도, item.경도],
+          { icon }
+        );
+
+        marker.bindPopup(item.구분);
+
+        markerGroup.addLayer(marker);
+
+      }
+
+    });
+
+    if(filtered.length === 0){
+      alert(`${km}km 안에 위험지역이 없습니다.`);
+      map.setView([lat, lng], 14);
+
+      if(isMobile()){
+        syncToMobileMap([], lat, lng, radiusMeter);
+      }
+      return;
+    }
+
+    const bounds = [
+      [lat, lng],
+      ...filtered.map(item => [item.위도, item.경도])
+    ];
+
+document.getElementById("countTotal").textContent = filtered.length;
+document.getElementById("countCity").textContent = "내 주변";
+
+    map.fitBounds(bounds, { padding:[40,40] });
+
+    if(isMobile()){
+      syncToMobileMap(filtered, lat, lng, radiusMeter);
+    }
+
+  });
+
+}
+document.getElementById("locBtn").onclick = function(){
+
+  if(!navigator.geolocation){
+    alert("GPS를 지원하지 않습니다.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+
+    map.setView([lat, lng], 15);
+
+    L.circleMarker([lat,lng],{
+      radius:8,
+      color:"#2563eb",
+      fillColor:"#2563eb",
+      fillOpacity:1
+    }).addTo(markerGroup);
+  });
+
+};
 </script>
+<div class="mobile-map-popup" id="mobileMapPopup">
+
+  <div class="mobile-map-header">
+    지도 보기
+    <button class="mobile-map-close" onclick="closeMobileMap()">닫기</button>
+  </div>
+
+  <div id="mobileMap" class="mobile-map"></div>
+
+</div>
+
 
 </body>
 </html>
