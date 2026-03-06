@@ -712,10 +712,6 @@ async function loadData(){
     markerGroup.clearLayers();
   }
 
-  if(isMobile()){
-    openMobileMap();
-  }
-
 
   const city = document.getElementById("city").value;
   const town = document.getElementById("town").value;
