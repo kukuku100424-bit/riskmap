@@ -334,8 +334,9 @@ html,body{
 }
 #map{
   width:100%;
-  height:100%;
+  height:100vh;
 }
+
 .top-badge{
   position:absolute;
   top:14px;
@@ -410,9 +411,17 @@ html,body{
     padding:15px 14px;
   }
   .map-wrap{
-    height:72vh;
-    min-height:520px;
-  }
+  position:relative;
+  flex:1;
+  min-width:0;
+  height:100%;
+}
+
+#map{
+  width:100%;
+  height:100%;
+  min-height:500px;
+}
   .legend{
     grid-template-columns:1fr;
   }
@@ -646,8 +655,11 @@ async function loadData(){
 
       const popupHtml = `
         <div class="popup-wrap">
+
           <img class="popup-img" src="${escapeHtml(item.사진URL)}" alt="현장 사진">
+
           <div class="popup-title">${escapeHtml(item.구분)}</div>
+
           <div class="popup-meta">
             순번: ${escapeHtml(item.순번)}<br>
             시군구: ${escapeHtml(item.시군구)}<br>
@@ -655,7 +667,30 @@ async function loadData(){
             날짜: ${escapeHtml(item.날짜)}<br>
             주소: ${escapeHtml(item.주소)}
           </div>
-          <div class="popup-desc">${escapeHtml(item.사고설명)}</div>
+
+          <div class="popup-desc">
+            ${escapeHtml(item.사고설명)}
+          </div>
+
+          <div style="margin-top:10px;">
+            <a 
+              href="https://map.kakao.com/link/to/위험지역,${item.위도},${item.경도}" 
+              target="_blank"
+              style="
+                display:block;
+                text-align:center;
+                background:#FEE500;
+                color:#000;
+                font-weight:700;
+                padding:8px;
+                border-radius:8px;
+                text-decoration:none;
+                font-size:13px;
+              ">
+              카카오맵 길찾기
+            </a>
+          </div>
+
         </div>
       `;
 
@@ -684,6 +719,12 @@ function resetFilters(){
   document.querySelectorAll(".category-check").forEach(el => el.checked = false);
   loadMeta().then(loadData);
 }
+
+window.addEventListener("load", function(){
+  setTimeout(()=>{
+    map.invalidateSize();
+  },500);
+});
 
 document.getElementById("city").addEventListener("change", updateTowns);
 
