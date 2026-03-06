@@ -831,7 +831,7 @@ window.addEventListener("DOMContentLoaded", function(){
 
   createCategoryChecks();
 
-  loadMeta().then(loadData);
+  loadMeta();
 
 });
 // ===== 브라우저 닫힘 감지용 heartbeat =====
