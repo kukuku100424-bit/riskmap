@@ -519,10 +519,13 @@ const CATEGORY_LIST = [
 
 const map = L.map("map", { zoomControl:true }).setView([34.85, 126.90], 9);
 
-http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
-  maxZoom: 19,
-  attribution: "&copy; OpenStreetMap"
-}).addTo(map);
+L.tileLayer(
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap"
+  }
+).addTo(map);
 
 let markerGroup = L.markerClusterGroup({
   showCoverageOnHover:false,
