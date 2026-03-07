@@ -531,8 +531,9 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
 
 .mobile-map-popup .map-legend{
   position:absolute;
-  bottom:65px;
+  top:70px;
   right:6px;
+  bottom:auto;
   z-index:3000;
 }
 
