@@ -349,6 +349,34 @@ html,body{
   font-size:13px;
   box-shadow:0 8px 24px rgba(15,23,42,.08);
 }
+
+.map-legend{
+  position:absolute;
+  top:70px;
+  right:14px;
+  z-index:999;
+  background:rgba(255,255,255,.96);
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  padding:10px 12px;
+  font-size:12px;
+  line-height:1.6;
+  box-shadow:0 8px 24px rgba(15,23,42,.08);
+}
+
+.map-legend-item{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:4px;
+}
+
+.map-legend-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+}
+
 .loading{
   position:absolute;
   left:50%;
@@ -578,6 +606,37 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
     <div id="map"></div>
     <button id="locBtn">📍 내 위치</button>
     <div class="top-badge">모바일 / PC 지원</div>
+
+<div class="map-legend">
+
+  <div class="map-legend-item">
+    <span class="map-legend-dot" style="background:#ef4444"></span>
+    교통사고다발구역
+  </div>
+
+  <div class="map-legend-item">
+    <span class="map-legend-dot" style="background:#06b6d4"></span>
+    상습결빙구역
+  </div>
+
+  <div class="map-legend-item">
+    <span class="map-legend-dot" style="background:#2563eb"></span>
+    상습침수구역
+  </div>
+
+  <div class="map-legend-item">
+    <span class="map-legend-dot" style="background:#f97316"></span>
+    화재다빈도발생구역
+  </div>
+
+  <div class="map-legend-item">
+    <span class="map-legend-dot" style="background:#7c3aed"></span>
+    우범지역
+  </div>
+
+</div>
+
+
     <div class="loading" id="loadingBox">데이터를 불러오는 중입니다...</div>
   </main>
 </div>
