@@ -528,6 +528,14 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
 }
 
 }
+
+.mobile-map-popup .map-legend{
+  position:absolute;
+  bottom:80px;
+  right:12px;
+  z-index:3000;
+}
+
 </style>
 </head>
 <body>
@@ -1259,6 +1267,7 @@ document.getElementById("locBtn").onclick = function(){
 
 };
 </script>
+
 <div class="mobile-map-popup" id="mobileMapPopup">
 
   <div class="mobile-map-header">
@@ -1268,8 +1277,36 @@ document.getElementById("locBtn").onclick = function(){
 
   <div id="mobileMap" class="mobile-map"></div>
 
-</div>
+  <div class="map-legend">
 
+    <div class="map-legend-item">
+      <span class="map-legend-dot" style="background:#ef4444"></span>
+      교통사고다발구역
+    </div>
+
+    <div class="map-legend-item">
+      <span class="map-legend-dot" style="background:#06b6d4"></span>
+      상습결빙구역
+    </div>
+
+    <div class="map-legend-item">
+      <span class="map-legend-dot" style="background:#2563eb"></span>
+      상습침수구역
+    </div>
+
+    <div class="map-legend-item">
+      <span class="map-legend-dot" style="background:#f97316"></span>
+      화재다빈도발생구역
+    </div>
+
+    <div class="map-legend-item">
+      <span class="map-legend-dot" style="background:#7c3aed"></span>
+      우범지역
+    </div>
+
+  </div>
+
+</div>
 
 </body>
 </html>
