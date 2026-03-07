@@ -516,6 +516,18 @@ font-size:14px;
 cursor:pointer;
 box-shadow:0 4px 10px rgba(0,0,0,0.2);
 }
+
+@media (max-width:900px){
+
+.map-legend{
+  top:auto;
+  bottom:80px;
+  right:10px;
+  font-size:11px;
+  padding:8px;
+}
+
+}
 </style>
 </head>
 <body>
