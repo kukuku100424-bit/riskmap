@@ -468,11 +468,6 @@ html,body{
   flex:1;
 }
 
-@media(min-width:901px){
-  .mobile-map-popup{
-    display:none !important;
-  }
-}
 
 #locBtn{
 position:absolute;
@@ -603,6 +598,40 @@ const CATEGORY_LIST = [
   "우범지역"
 ];
 
+const ICONS = {
+
+  "교통사고다발구역": L.icon({
+    iconUrl: "/static/accident.png",
+    iconSize: [28,28],
+    iconAnchor: [14,28]
+  }),
+
+  "상습결빙구역": L.icon({
+    iconUrl: "/static/ice.png",
+    iconSize: [28,28],
+    iconAnchor: [14,28]
+  }),
+
+  "상습침수구역": L.icon({
+    iconUrl: "/static/flood.png",
+    iconSize: [28,28],
+    iconAnchor: [14,28]
+  }),
+
+  "화재다빈도발생구역": L.icon({
+    iconUrl: "/static/fire.png",
+    iconSize: [28,28],
+    iconAnchor: [14,28]
+  }),
+
+  "우범지역": L.icon({
+    iconUrl: "/static/crime.png",
+    iconSize: [28,28],
+    iconAnchor: [14,28]
+  })
+
+};
+
 const map = L.map("map", { zoomControl:true }).setView([34.85, 126.90], 9);
 
 L.tileLayer(
@@ -670,16 +699,6 @@ function getCheckedCategories(){
   return Array.from(document.querySelectorAll(".category-check:checked")).map(el => el.value);
 }
 
-function buildMarkerIcon(color){
-  return L.divIcon({
-    className: "",
-    html: `<div class="custom-marker" style="background:${color};"></div>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    popupAnchor: [0, -8]
-  });
-}
-
 function escapeHtml(text){
   if(text === null || text === undefined) return "";
   return String(text)
@@ -735,7 +754,7 @@ async function loadData(){
 
   if(!isMobile()){
 
-    const icon = buildMarkerIcon(item.마커색상);
+    const icon = ICONS[item.구분];
     const marker = L.marker([item.위도, item.경도], { icon });
 
       const popupHtml = `
@@ -857,6 +876,7 @@ function openMobileMap(){
   const popup = document.getElementById("mobileMapPopup");
   popup.style.display = "flex";
 
+  history.pushState({mobileMap:true}, "", "#map");
   const mapDiv = document.getElementById("mobileMap");
 
   if(!window.mobileLeafletMap){
@@ -882,9 +902,15 @@ function openMobileMap(){
 }
 
 function closeMobileMap(){
-  document.getElementById("mobileMapPopup").style.display = "none";
-}
 
+  const popup = document.getElementById("mobileMapPopup");
+  popup.style.display = "none";
+
+  if(location.hash === "#map"){
+    history.back();
+  }
+
+}
 function syncToMobileMap(items, userLat=null, userLng=null, radiusMeter=null){
   if(!isMobile()) return;
 
@@ -922,7 +948,7 @@ function syncToMobileMap(items, userLat=null, userLng=null, radiusMeter=null){
   }
 
   items.forEach(item=>{
-    const icon = buildMarkerIcon(item.마커색상);
+    const icon = ICONS[item.구분];
 
     const marker = L.marker([item.위도, item.경도], { icon });
 
@@ -1036,12 +1062,12 @@ async function findNearest(){
       return;
     }
 
-    const icon = buildMarkerIcon(nearest.마커색상);
+    const icon = ICONS[nearest.구분];
 
-    const marker = L.marker(
-      [nearest.위도, nearest.경도],
-      { icon }
-    );
+const marker = L.marker(
+  [nearest.위도, nearest.경도],
+  { icon }
+);
 
     marker.bindPopup(`
       <div style="font-size:13px;">
@@ -1123,7 +1149,7 @@ async function findRadius(km){
 
         filtered.push(item);
 
-        const icon = buildMarkerIcon(item.마커색상);
+        const icon = ICONS[item.구분];
 
         const marker = L.marker(
           [item.위도, item.경도],
@@ -1187,6 +1213,17 @@ document.getElementById("locBtn").onclick = function(){
   });
 
 };
+
+window.addEventListener("popstate", function(e){
+
+  const popup = document.getElementById("mobileMapPopup");
+
+  if(popup && popup.style.display === "flex"){
+    popup.style.display = "none";
+  }
+
+});
+
 </script>
 <div class="mobile-map-popup" id="mobileMapPopup">
 
