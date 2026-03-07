@@ -531,8 +531,8 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
 
 .mobile-map-popup .map-legend{
   position:absolute;
-  bottom:80px;
-  right:12px;
+  bottom:65px;
+  right:6px;
   z-index:3000;
 }
 
@@ -931,6 +931,7 @@ function isMobile(){
 }
 
 function openMobileMap(){
+  history.pushState({mobileMap:true}, "");
   if(!isMobile()) return;
 
   const popup = document.getElementById("mobileMapPopup");
@@ -1266,6 +1267,16 @@ document.getElementById("locBtn").onclick = function(){
   });
 
 };
+window.addEventListener("popstate", function(e){
+
+  const popup = document.getElementById("mobileMapPopup");
+
+  if(popup.style.display === "flex"){
+    popup.style.display = "none";
+    history.replaceState(null, "", location.href);
+  }
+
+});
 </script>
 
 <div class="mobile-map-popup" id="mobileMapPopup">
