@@ -234,11 +234,8 @@ html,body{
   height:22px;
   object-fit:contain;
 
-  position:relative;
-  left:14px;   /* 오른쪽 이동 */
-  top:6px;     /* 아래 이동 */
+  margin-left:12px;
 }
-
 .logo{
   width:48px;
   height:48px;
@@ -721,7 +718,7 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
 
 #mobileLocBtn{
 position:absolute;
-bottom:20px;
+bottom:250px;
 right:20px;
 z-index:4000;
 background:#2563eb;
@@ -768,7 +765,7 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
 
             <div class="btn-row">
         <button class="btn primary" onclick="loadData()">조회</button>
-        <button class="btn secondary" onclick="resetFilters()">초기화</button>
+        <button class="btn secondary" onclick="resetFilters()">필터 초기화</button>
       </div>
 
 <div class="location-box">
@@ -807,8 +804,7 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
     </div>
 
     <div class="card">
-      <h3>범례</h3>
-      <div class="legend">
+        <div class="legend">
         <div class="legend-item"><span class="dot" style="background:#ef4444"></span>교통사고다발구역</div>
         <div class="legend-item"><span class="dot" style="background:#06b6d4"></span>상습결빙구역</div>
         <div class="legend-item"><span class="dot" style="background:#2563eb"></span>상습침수구역</div>
@@ -817,15 +813,6 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
       </div>
     </div>
 
-    <div class="card">
-      <h3>안내</h3>
-      <div class="notice">
-        - 좌표가 없는 데이터는 자동 제외됩니다.<br>
-        - 읍면동은 주소에서 자동 추출됩니다.<br>
-        - 팝업의 사진, 설명, 날짜는 엑셀 열이 비어 있으면 샘플 정보가 자동 표시됩니다.<br>
-        - 브라우저 창을 닫으면 잠시 후 서버도 자동 종료됩니다.
-      </div>
-    </div>
   </aside>
 
   <main class="map-wrap">
@@ -894,6 +881,48 @@ const CATEGORY_LIST = [
 ];
 
 const map = L.map("map", { zoomControl:true }).setView([34.85, 126.90], 9);
+
+let userLat = null;
+let userLng = null;
+
+
+function showMsg(text){
+  document.getElementById("msgText").innerText = text;
+  document.getElementById("msgModal").style.display = "flex";
+}
+
+function closeMsg(){
+  document.getElementById("msgModal").style.display = "none";
+}
+
+function preloadLocation(){
+  if(!navigator.geolocation){
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+
+    function(pos){
+
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
+
+    },
+
+    function(err){
+      console.log("위치 사전 요청 실패", err);
+    },
+
+    {
+      enableHighAccuracy:false,
+      timeout:4000,
+      maximumAge:60000
+    }
+
+  );
+
+}
+
 
 L.tileLayer(
   "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -1159,7 +1188,7 @@ if(!isMobile()){
     map.fitBounds(bounds, { padding:[40,40] });
   }else{
     map.setView([34.85, 126.90], 9);
-    alert("조건에 맞는 데이터가 없습니다.");
+    showMsg("조건에 맞는 데이터가 없습니다.");
   }
 
 }
@@ -1169,7 +1198,7 @@ if(isMobile()){
 }
 
   }catch(e){
-    alert("데이터를 불러오는 중 오류가 발생했습니다.");
+    showMsg("데이터를 불러오는 중 오류가 발생했습니다.");
     console.error(e);
 
 
@@ -1179,29 +1208,64 @@ if(isMobile()){
 }
 
 function resetFilters(){
-  document.getElementById("city").value = "";
-  document.getElementById("town").innerHTML = '<option value="">전체</option>';
-  document.querySelectorAll(".category-check").forEach(el => el.checked = false);
-  loadMeta().then(loadData);
-}
 
+  // 시군구 초기화
+  document.getElementById("city").value = "";
+
+  // 읍면동 초기화
+  document.getElementById("town").value = "";
+
+  // 구분 체크 해제
+  document.querySelectorAll(".category-check")
+  .forEach(el => el.checked = false);
+
+  // 결과 숫자 초기화
+  document.getElementById("countTotal").textContent = 0;
+  document.getElementById("countCity").textContent = "전체";
+
+  // PC 지도 마커 삭제
+  if(markerGroup){
+    markerGroup.clearLayers();
+  }
+
+  // 모바일 지도 마커 삭제
+  if(window.mobileMarkerGroup){
+    window.mobileMarkerGroup.clearLayers();
+  }
+
+  // 지도 위치 초기화
+  map.setView([34.85,126.90],9);
+
+    // 모바일 결과 패널 닫기
+  const result = document.getElementById("mobileResultPanel");
+  if(result){
+    result.style.display = "none";
+  }
+
+  // 데이터 다시 불러오기
+  loadData();
+
+}
 window.addEventListener("load", function(){
   setTimeout(()=>{
     map.invalidateSize();
   },500);
 });
 
-document.getElementById("city").addEventListener("change", updateTowns);
-
 window.addEventListener("DOMContentLoaded", function(){
+
+  preloadLocation();
 
   createCategoryChecks();
 
-  if(isMobile()){
-    loadMeta();          // 모바일은 메타만 불러옴
-  }else{
-    loadMeta().then(loadData);  // PC는 바로 지도 표시
-  }
+  loadMeta().then(()=>{
+    document.getElementById("city").addEventListener("change", updateTowns);
+
+    if(!isMobile()){
+      loadData();
+    }
+
+  });
 
 });
 
@@ -1395,7 +1459,7 @@ if(userLat && userLng){
 async function findNearest(){
 
   if(!navigator.geolocation){
-    alert("GPS를 지원하지 않는 기기입니다.");
+    showMsg("GPS를 지원하지 않는 기기입니다.");
     return;
   }
 
@@ -1433,9 +1497,11 @@ async function findNearest(){
     });
 
     if(!nearest){
-      alert("주변 위험지역이 없습니다.");
-      return;
-    }
+
+  showMsg("주변 위험지역이 없습니다.");
+
+  return;
+}
 
     const icon = buildMarkerIcon(nearest.마커색상);
 
@@ -1500,7 +1566,7 @@ marker.bindPopup(popupHtml, { maxWidth: 290 });
 
   },
   err => {
-    alert("위치를 가져올 수 없습니다.");
+    showMsg("위치를 가져올 수 없습니다.");
   },
   {
     enableHighAccuracy:false,
@@ -1513,7 +1579,7 @@ marker.bindPopup(popupHtml, { maxWidth: 290 });
 async function findRadius(km){
 
   if(!navigator.geolocation){
-    alert("GPS를 지원하지 않는 기기입니다.");
+    showMsg("GPS를 지원하지 않는 기기입니다.");
     return;
   }
 
@@ -1614,14 +1680,11 @@ marker.bindPopup(popupHtml, { maxWidth: 290 });
     });
 
     if(filtered.length === 0){
-      alert(`${km}km 안에 위험지역이 없습니다.`);
-      map.setView([lat, lng], 14);
 
-      if(isMobile()){
-        syncToMobileMap([], lat, lng, radiusMeter);
-      }
-      return;
-    }
+  showMsg(`${km}km 안에 위험지역이 없습니다.`);
+
+  return;
+}
 
     const bounds = [
       [lat, lng],
@@ -1639,7 +1702,7 @@ marker.bindPopup(popupHtml, { maxWidth: 290 });
 
   },
   err => {
-    alert("위치를 가져올 수 없습니다.");
+    showMsg("위치를 가져올 수 없습니다.");
   },
   {
     enableHighAccuracy:false,
@@ -1657,26 +1720,51 @@ window.addEventListener("DOMContentLoaded", function(){
     locBtn.onclick = function(){
 
       if(!navigator.geolocation){
-        alert("GPS를 지원하지 않습니다.");
+        showMsg("GPS를 지원하지 않는 기기입니다.");
         return;
       }
 
-      navigator.geolocation.getCurrentPosition(pos=>{
+navigator.geolocation.getCurrentPosition(
 
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
+pos=>{
 
-        markerGroup.clearLayers();
+const lat = pos.coords.latitude;
+const lng = pos.coords.longitude;
 
-        map.setView([lat, lng], 15);
+markerGroup.clearLayers();
 
-        L.marker(
-          [lat, lng],
-          { icon: buildUserIcon() }
-        ).addTo(markerGroup);
+map.setView([lat, lng], 15);
 
-      });
+L.marker(
+  [lat, lng],
+  { icon: buildUserIcon() }
+).addTo(markerGroup);
 
+if(window.mobileLeafletMap){
+  window.mobileLeafletMap.setView([lat,lng],15);
+}
+
+if(window.mobileMarkerGroup){
+  window.mobileMarkerGroup.clearLayers();
+
+  L.marker([lat,lng],{icon:buildUserIcon()})
+  .addTo(window.mobileMarkerGroup);
+}
+
+
+},
+
+err=>{
+  showMsg("GPS를 지원하지 않는 기기입니다.");
+},
+
+{
+  enableHighAccuracy:false,
+  timeout:4000,
+  maximumAge:60000
+}
+
+);
     };
   }
 
@@ -1716,20 +1804,24 @@ const lat = pos.coords.latitude;
 const lng = pos.coords.longitude;
 
 if(window.mobileLeafletMap){
-  window.mobileLeafletMap.setView([lat,lng],15);
-}
 
-if(window.mobileMarkerGroup){
-  L.marker([lat,lng],{icon:buildUserIcon()})
-  .addTo(window.mobileMarkerGroup);
-}
-});
+  window.mobileLeafletMap.setView([lat,lng],15);
+
+  if(window.mobileMarkerGroup){
+    window.mobileMarkerGroup.clearLayers();
+
+    L.marker([lat,lng],{icon:buildUserIcon()})
+    .addTo(window.mobileMarkerGroup);
+  }
+
+}});
 
 };
 
 }
 
 });
+
 
 </script>
 
@@ -1784,6 +1876,48 @@ if(window.mobileMarkerGroup){
 
   </div>
 
+</div>
+
+
+
+<div id="msgModal" style="
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.45);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:5000;
+">
+
+<div style="
+background:white;
+padding:22px;
+border-radius:14px;
+width:280px;
+text-align:center;
+box-shadow:0 10px 30px rgba(0,0,0,.25);
+">
+
+<div id="msgText" style="
+font-size:15px;
+margin-bottom:18px;
+line-height:1.5;
+"></div>
+
+<button onclick="closeMsg()" style="
+background:#2563eb;
+border:none;
+color:white;
+padding:8px 16px;
+border-radius:8px;
+font-weight:700;
+cursor:pointer;
+">
+확인
+</button>
+
+</div>
 </div>
 
 </body>
