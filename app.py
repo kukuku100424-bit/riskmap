@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string, Response
+from flask import Flask, request, jsonify, render_template_string, Response, send_file
 import pandas as pd
 import os
 import re
@@ -197,9 +197,40 @@ html,body{
 .brand{
   display:flex;
   align-items:center;
-  gap:12px;
-  margin-bottom:16px;
+  gap:14px;
+  margin-bottom:18px;
 }
+
+.brand-left{
+  display:flex;
+  flex-direction:column;
+}
+
+.brand-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+
+  font-size:22px;
+  font-weight:900;
+  margin:0;
+  line-height:1.2;
+}
+.brand-sub{
+  font-size:13px;
+  color:#64748b;
+  margin-top:3px;
+}
+
+.ci-logo{
+  height:22px;
+  object-fit:contain;
+
+  position:relative;
+  left:14px;   /* 오른쪽 이동 */
+  top:6px;     /* 아래 이동 */
+}
+
 .logo{
   width:48px;
   height:48px;
@@ -427,34 +458,27 @@ html,body{
 }
 @media (max-width: 900px){
   .page{
-    flex-direction:column;
+    display:block;
     height:auto;
     min-height:100vh;
   }
+
   .sidebar{
     width:100%;
     min-width:0;
     border-right:none;
-    border-bottom:1px solid #e5e7eb;
+    border-bottom:none;
     padding:15px 14px;
   }
-  .map-wrap{
-  position:relative;
-  flex:1;
-  min-width:0;
-  height:100%;
-}
 
-#map{
-  width:100%;
-  height:100%;
-  min-height:500px;
-}
+  .map-wrap{
+    display:none;
+  }
+
   .legend{
     grid-template-columns:1fr;
   }
 }
-
 
 
 .mobile-map-popup{
@@ -537,22 +561,120 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
   z-index:3000;
 }
 
+.user-marker-wrap{
+  position:relative;
+  width:28px;
+  height:28px;
+}
+
+.user-pin{
+  position:relative;
+  width:34px;
+  height:34px;
+}
+
+.user-pin::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:18px;
+  height:18px;
+  background:#2563eb;
+  border-radius:50%;
+  border:3px solid #ffffff;
+  transform:translate(-50%,-50%);
+  box-shadow:0 4px 12px rgba(0,0,0,.35);
+}
+
+.user-pin::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  background:rgba(37,99,235,0.25);
+  transform:translate(-50%,-50%);
+  animation:userPulse 1.8s infinite;
+}
+
+.user-marker-pulse{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:28px;
+  height:28px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:rgba(37,99,235,0.22);
+  animation:userPulse 1.8s ease-out infinite;
+}
+
+.user-marker-dot{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:14px;
+  height:14px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:#2563eb;
+  border:3px solid #ffffff;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+
+@keyframes userPulse{
+  0%{
+    transform:translate(-50%,-50%) scale(0.7);
+    opacity:0.9;
+  }
+  100%{
+    transform:translate(-50%,-50%) scale(1.8);
+    opacity:0;
+  }
+}
+
+.location-box{
+  margin-top:12px;
+  padding:12px;
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  background:#f8fafc;
+}
+
+.location-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:8px;
+}
+
+.location-box .btn{
+  background:#ffffff;
+  color:#111827;
+  border:1px solid #cbd5e1;
+}
+
 </style>
 </head>
 <body>
 
 <div class="page">
   <aside class="sidebar">
-   <div class="brand">
+<div class="brand">
 
-  <div>
-    <h1>위험지역 찾기</h1>
-    <p>엑셀 기반 위험정보 지도</p>
+  <div class="brand-left">
+    <div class="brand-title">
+      <span>위험지역 찾기</span>
+      <img src="/ci" class="ci-logo">
+    </div>
+
+    <div class="brand-sub">엑셀 기반 위험정보 지도</div>
   </div>
 
-</div>
-
-    <div class="card">
+</div>    <div class="card">
       <h3>조회 조건</h3>
 
       <label class="label">1. 시군구</label>
@@ -573,18 +695,25 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
         <button class="btn secondary" onclick="resetFilters()">초기화</button>
       </div>
 
-      <button class="btn primary" style="margin-top:10px;" onclick="findNearest()">
-  내 주변 위험지역 찾기
+<div class="location-box">
+
+<button class="btn secondary" onclick="findNearest()">
+내 주변 위험지역 찾기
 </button>
 
-<button class="btn secondary" style="margin-top:8px;" onclick="findRadius(1)">
+<div class="location-row">
+
+<button class="btn secondary" onclick="findRadius(1)">
 1km 위험지역
 </button>
 
-<button class="btn secondary" style="margin-top:8px;" onclick="findRadius(3)">
+<button class="btn secondary" onclick="findRadius(3)">
 3km 위험지역
 </button>
 
+</div>
+
+</div>
 </div>
 
 <div class="card">
@@ -654,6 +783,11 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
     <span class="map-legend-dot" style="background:#7c3aed"></span>
     우범지역
   </div>
+
+<div class="map-legend-item">
+  <span class="map-legend-dot" style="background:#2563eb;border:2px solid #fff;"></span>
+  내 위치
+</div>
 
 </div>
 
@@ -760,6 +894,16 @@ function buildMarkerIcon(color){
   });
 }
 
+function buildUserIcon(){
+  return L.divIcon({
+    className: "",
+    html: `<div class="user-pin"></div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17]
+  });
+}
+
+
 function escapeHtml(text){
   if(text === null || text === undefined) return "";
   return String(text)
@@ -839,23 +983,40 @@ async function loadData(){
 
           <div style="margin-top:10px;">
             <a 
-              href="https://map.kakao.com/link/to/위험지역,${item.위도},${item.경도}" 
+              href="https://map.naver.com/v5/directions/-/-/${item.경도},${item.위도},위험지역"
               target="_blank"
               style="
                 display:block;
                 text-align:center;
-                background:#FEE500;
-                color:#000;
+                background:#03C75A;
+                color:#ffffff;
                 font-weight:700;
                 padding:8px;
                 border-radius:8px;
                 text-decoration:none;
                 font-size:13px;
               ">
-              카카오맵 길찾기
+              네이버지도 길찾기
             </a>
           </div>
 
+          <div style="margin-top:6px;">
+            <a 
+              href="nmap://navigation?dlat=${item.위도}&dlng=${item.경도}&dname=위험지역&appname=riskmap"
+              style="
+                display:block;
+                text-align:center;
+                background:#111827;
+                color:#ffffff;
+                font-weight:700;
+                padding:8px;
+                border-radius:8px;
+                text-decoration:none;
+                font-size:13px;
+              ">
+              네이버 네비 바로 실행
+            </a>
+          </div>
         </div>
       `;
 
@@ -911,9 +1072,10 @@ window.addEventListener("DOMContentLoaded", function(){
 
   createCategoryChecks();
 
-  loadMeta();
+  loadMeta().then(loadData);
 
 });
+
 // ===== 브라우저 닫힘 감지용 heartbeat =====
 function heartbeat(){
   fetch("/heartbeat", {method:"POST"}).catch(()=>{});
@@ -976,16 +1138,12 @@ function syncToMobileMap(items, userLat=null, userLng=null, radiusMeter=null){
   const bounds = [];
 
   if(userLat !== null && userLng !== null){
-    const userMarker = L.circleMarker(
-      [userLat, userLng],
-      {
-        radius:8,
-        color:"#2563eb",
-        fillColor:"#2563eb",
-        fillOpacity:1
-      }
-    );
-    window.mobileMarkerGroup.addLayer(userMarker);
+    const userMarker = L.marker(
+  [userLat, userLng],
+  { icon: buildUserIcon() }
+);
+
+window.mobileMarkerGroup.addLayer(userMarker);
     bounds.push([userLat, userLng]);
 
     if(radiusMeter){
@@ -1025,23 +1183,42 @@ function syncToMobileMap(items, userLat=null, userLng=null, radiusMeter=null){
           ${escapeHtml(item.사고설명)}
         </div>
 
-        <div style="margin-top:10px;">
-          <a
-            href="https://map.kakao.com/link/to/위험지역,${item.위도},${item.경도}"
-            target="_blank"
-            style="
-              display:block;
-              text-align:center;
-              background:#FEE500;
-              color:#000;
-              font-weight:700;
-              padding:8px;
-              border-radius:8px;
-              text-decoration:none;
-              font-size:13px;
-            ">
-            카카오맵 길찾기
-          </a>
+          <div style="margin-top:10px;">
+            <a 
+              href="https://map.naver.com/v5/directions/-/-/${item.경도},${item.위도},위험지역"
+              target="_blank"
+              style="
+                display:block;
+                text-align:center;
+                background:#03C75A;
+                color:#ffffff;
+                font-weight:700;
+                padding:8px;
+                border-radius:8px;
+                text-decoration:none;
+                font-size:13px;
+              ">
+              네이버지도 길찾기
+            </a>
+          </div>
+
+          <div style="margin-top:6px;">
+            <a 
+              href="nmap://navigation?dlat=${item.위도}&dlng=${item.경도}&dname=위험지역&appname=riskmap"
+              style="
+                display:block;
+                text-align:center;
+                background:#111827;
+                color:#ffffff;
+                font-weight:700;
+                padding:8px;
+                border-radius:8px;
+                text-decoration:none;
+                font-size:13px;
+              ">
+              네이버 네비 바로 실행
+            </a>
+          </div>
         </div>
       </div>
     `;
@@ -1085,16 +1262,10 @@ async function findNearest(){
 
     markerGroup.clearLayers();
 
-    L.circleMarker(
+    L.marker(
       [lat, lng],
-      {
-        radius:8,
-        color:"#2563eb",
-        fillColor:"#2563eb",
-        fillOpacity:1
-      }
+      { icon: buildUserIcon() }
     ).addTo(markerGroup);
-
     let nearest = null;
     let minDist = Infinity;
 
@@ -1171,14 +1342,9 @@ async function findRadius(km){
 
     const radiusMeter = km * 1000;
 
-    L.circleMarker(
+    L.marker(
       [lat, lng],
-      {
-        radius:8,
-        color:"#2563eb",
-        fillColor:"#2563eb",
-        fillOpacity:1
-      }
+      { icon: buildUserIcon() }
     ).addTo(markerGroup);
 
     L.circle(
@@ -1246,28 +1412,38 @@ document.getElementById("countCity").textContent = "내 주변";
   });
 
 }
-document.getElementById("locBtn").onclick = function(){
+window.addEventListener("DOMContentLoaded", function(){
 
-  if(!navigator.geolocation){
-    alert("GPS를 지원하지 않습니다.");
-    return;
+  const locBtn = document.getElementById("locBtn");
+
+  if(locBtn){
+    locBtn.onclick = function(){
+
+      if(!navigator.geolocation){
+        alert("GPS를 지원하지 않습니다.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(pos=>{
+
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        markerGroup.clearLayers();
+
+        map.setView([lat, lng], 15);
+
+        L.marker(
+          [lat, lng],
+          { icon: buildUserIcon() }
+        ).addTo(markerGroup);
+
+      });
+
+    };
   }
 
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-
-    map.setView([lat, lng], 15);
-
-    L.circleMarker([lat,lng],{
-      radius:8,
-      color:"#2563eb",
-      fillColor:"#2563eb",
-      fillOpacity:1
-    }).addTo(markerGroup);
-  });
-
-};
+});
 window.addEventListener("popstate", function(e){
 
   const popup = document.getElementById("mobileMapPopup");
@@ -1315,6 +1491,11 @@ window.addEventListener("popstate", function(e){
       <span class="map-legend-dot" style="background:#7c3aed"></span>
       우범지역
     </div>
+<div class="map-legend-item">
+  <span class="map-legend-dot" style="background:#2563eb;border:2px solid #fff;"></span>
+  내 위치
+</div>
+
 
   </div>
 
@@ -1324,6 +1505,10 @@ window.addEventListener("popstate", function(e){
 </html>
 """
 
+
+@app.route("/ci")
+def ci():
+    return send_file("ci.png", mimetype="image/png")
 
 @app.route("/")
 def index():
