@@ -1583,13 +1583,54 @@ async function runNearest(lat,lng){
 
   const icon = buildMarkerIcon(nearest.마커색상);
 
-  const marker = L.marker(
-    [nearest.위도,nearest.경도],
-    {icon}
-  );
+const marker = L.marker(
+  [nearest.위도,nearest.경도],
+  {icon}
+);
 
-  markerGroup.addLayer(marker);
+const popupHtml = `
+<div class="popup-wrap">
 
+<img class="popup-img" src="${escapeHtml(nearest.사진URL)}">
+
+<div class="popup-title">${escapeHtml(nearest.구분)}</div>
+
+<div class="popup-meta">
+순번: ${escapeHtml(nearest.순번)}<br>
+시군구: ${escapeHtml(nearest.시군구)}<br>
+읍면동: ${escapeHtml(nearest.읍면동)}<br>
+날짜: ${escapeHtml(nearest.날짜)}<br>
+주소: ${escapeHtml(nearest.주소)}
+</div>
+
+<div class="popup-desc">
+${escapeHtml(nearest.사고설명)}
+</div>
+
+<div style="margin-top:10px;">
+<a href="https://map.naver.com/v5/search/${encodeURIComponent(nearest.주소)}"
+target="_blank"
+style="
+display:block;
+text-align:center;
+background:#03C75A;
+color:#ffffff;
+font-weight:700;
+padding:8px;
+border-radius:8px;
+text-decoration:none;
+font-size:13px;
+">
+네이버지도 길찾기
+</a>
+</div>
+
+</div>
+`;
+
+marker.bindPopup(popupHtml,{maxWidth:290});
+
+markerGroup.addLayer(marker);
   map.setView([nearest.위도,nearest.경도],16);
 
   document.getElementById("countTotal").textContent = 1;
