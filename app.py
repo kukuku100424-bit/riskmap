@@ -403,8 +403,8 @@ html,body{
 }
 
 .map-legend-dot{
-  width:10px;
-  height:10px;
+  width:15px;
+  height:15px;
   border-radius:50%;
 }
 
@@ -580,7 +580,7 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
   top:50%;
   width:18px;
   height:18px;
-  background:#2563eb;
+  background:#22c55e;
   border-radius:50%;
   border:3px solid #ffffff;
   transform:translate(-50%,-50%);
@@ -595,7 +595,7 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
   width:34px;
   height:34px;
   border-radius:50%;
-  background:rgba(37,99,235,0.25);
+  background:rgba(34,197,94,0.25);
   transform:translate(-50%,-50%);
   animation:userPulse 1.8s infinite;
 }
@@ -827,8 +827,8 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
   </div>
 
 <div class="map-legend-item">
-  <span class="map-legend-dot" style="background:#2563eb;border:2px solid #fff;"></span>
-  내 위치
+  <span class="map-legend-dot" style="background:#22c55e"></span>
+내 위치
 </div>
 
 </div>
@@ -1034,6 +1034,10 @@ async function updateTowns(){
 
 async function loadData(){
 
+  if(isMobile()){
+    openMobileMap();
+  }
+
   setLoading(true);
 
   if(!isMobile()){
@@ -1087,7 +1091,7 @@ async function loadData(){
 
           <div style="margin-top:10px;">
             <a 
-              href="https://map.naver.com/v5/directions/-/-/${item.경도},${item.위도},위험지역"
+              href="https://map.naver.com/v5/search/${encodeURIComponent(item.주소)}"
               target="_blank"
               style="
                 display:block;
@@ -1310,7 +1314,7 @@ window.mobileMarkerGroup.addLayer(userMarker);
 
           <div style="margin-top:10px;">
             <a 
-              href="https://map.naver.com/v5/directions/-/-/${item.경도},${item.위도},위험지역"
+              href="https://map.naver.com/v5/search/${encodeURIComponent(item.주소)}"
               target="_blank"
               style="
                 display:block;
@@ -1627,7 +1631,7 @@ window.addEventListener("popstate", function(e){
       우범지역
     </div>
 <div class="map-legend-item">
-  <span class="map-legend-dot" style="background:#2563eb;border:2px solid #fff;"></span>
+  <span class="user-legend-dot"></span>
   내 위치
 </div>
 
