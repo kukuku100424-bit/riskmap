@@ -213,13 +213,14 @@ html,body{
 .brand-left{
   display:flex;
   flex-direction:column;
+  width:100%;
 }
 
 .brand-title{
   display:flex;
   align-items:center;
-  justify-content:center;
-  gap:10px;
+  justify-content:space-between;
+  width:100%;
 
   font-size:22px;
   font-weight:900;
@@ -236,8 +237,10 @@ html,body{
 .ci-logo{
   height:48px;
   object-fit:contain;
-  margin-left:8px;
+  margin-left:12px;
+  flex-shrink:0;
 }
+
 
 @media (max-width:900px){
   .ci-logo{
@@ -1490,6 +1493,11 @@ if(userLat && userLng){
 
 async function findNearest(){
 
+  if(userLat && userLng){
+    runNearest(userLat,userLng);
+    return;
+  }
+
   if(!navigator.geolocation){
     showMsg("GPS를 지원하지 않는 기기입니다.");
     return;
@@ -1497,256 +1505,169 @@ async function findNearest(){
 
   navigator.geolocation.getCurrentPosition(
 
-  async pos => {
+    pos=>{
 
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
 
-    userLat = lat;
-    userLng = lng;
+      runNearest(userLat,userLng);
 
-    const res = await fetch("/data");
-    const data = await res.json();
+    },
 
-    markerGroup.clearLayers();
+    err=>{
+      showMsg("위치를 가져올 수 없습니다.");
+    },
 
-    L.marker(
-      [lat, lng],
-      { icon: buildUserIcon() }
-    ).addTo(markerGroup);
-
-    let nearest = null;
-    let minDist = Infinity;
-
-    data.forEach(item => {
-
-      const dist = map.distance(
-        [lat, lng],
-        [item.위도, item.경도]
-      );
-
-      if(dist < minDist){
-        minDist = dist;
-        nearest = item;
-      }
-
-    });
-
-    if(!nearest){
-      showMsg("주변 위험지역이 없습니다.");
-      return;
+    {
+      enableHighAccuracy:false,
+      timeout:5000,
+      maximumAge:60000
     }
 
-    const icon = buildMarkerIcon(nearest.마커색상);
+  );
 
-    const marker = L.marker(
-      [nearest.위도, nearest.경도],
-      { icon }
+}
+
+
+async function runNearest(lat,lng){
+
+  const res = await fetch("/data");
+  const data = await res.json();
+
+  markerGroup.clearLayers();
+
+  L.marker(
+    [lat,lng],
+    { icon: buildUserIcon() }
+  ).addTo(markerGroup);
+
+  let nearest = null;
+  let minDist = Infinity;
+
+  data.forEach(item => {
+
+    const dist = map.distance(
+      [lat,lng],
+      [item.위도,item.경도]
     );
 
-    const popupHtml = `
-<div class="popup-wrap">
-
-<img class="popup-img" src="${escapeHtml(nearest.사진URL)}" alt="현장 사진">
-
-<div class="popup-title">${escapeHtml(nearest.구분)}</div>
-
-<div class="popup-meta">
-순번: ${escapeHtml(nearest.순번)}<br>
-시군구: ${escapeHtml(nearest.시군구)}<br>
-읍면동: ${escapeHtml(nearest.읍면동)}<br>
-날짜: ${escapeHtml(nearest.날짜)}<br>
-주소: ${escapeHtml(nearest.주소)}
-</div>
-
-<div class="popup-desc">
-${escapeHtml(nearest.사고설명)}
-</div>
-
-<div style="margin-top:10px;">
-<a 
-href="https://map.naver.com/v5/search/${encodeURIComponent(nearest.주소)}"
-target="_blank"
-style="
-display:block;
-text-align:center;
-background:#03C75A;
-color:#ffffff;
-font-weight:700;
-padding:8px;
-border-radius:8px;
-text-decoration:none;
-font-size:13px;
-">
-네이버지도 길찾기
-</a>
-</div>
-
-</div>
-`;
-
-
-marker.bindPopup(popupHtml, { maxWidth: 290 });
-
-    markerGroup.addLayer(marker);
-
-    map.setView([nearest.위도, nearest.경도], 16);
-
-    document.getElementById("countTotal").textContent = 1;
-    document.getElementById("countCity").textContent = "내 주변";
-
-    if(isMobile()){
-      syncToMobileMap([nearest], lat, lng, null);
+    if(dist < minDist){
+      minDist = dist;
+      nearest = item;
     }
 
-  },
-  err => {
-    showMsg("위치를 가져올 수 없습니다.");
-  },
-  {
-    enableHighAccuracy:false,
-    timeout:5000,
-    maximumAge:60000
   });
+
+  if(!nearest){
+    showMsg("주변 위험지역이 없습니다.");
+    return;
+  }
+
+  const icon = buildMarkerIcon(nearest.마커색상);
+
+  const marker = L.marker(
+    [nearest.위도,nearest.경도],
+    {icon}
+  );
+
+  markerGroup.addLayer(marker);
+
+  map.setView([nearest.위도,nearest.경도],16);
+
+  document.getElementById("countTotal").textContent = 1;
+  document.getElementById("countCity").textContent = "내 주변";
+
+  if(isMobile()){
+    syncToMobileMap([nearest],lat,lng,null);
+  }
 
 }
 
 async function findRadius(km){
 
+  if(userLat && userLng){
+    runRadius(userLat,userLng,km);
+    return;
+  }
+
   if(!navigator.geolocation){
     showMsg("GPS를 지원하지 않는 기기입니다.");
     return;
   }
 
   navigator.geolocation.getCurrentPosition(
-  async pos => {
 
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
+    pos=>{
 
-    userLat = lat;
-    userLng = lng;
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
 
-    const res = await fetch("/data");
-    const data = await res.json();
+      runRadius(userLat,userLng,km);
 
-    markerGroup.clearLayers();
+    },
 
-    const radiusMeter = km * 1000;
+    err=>{
+      showMsg("위치를 가져올 수 없습니다.");
+    },
 
-    L.marker(
-      [lat, lng],
-      { icon: buildUserIcon() }
-    ).addTo(markerGroup);
-
-    L.circle(
-      [lat, lng],
-      {
-        radius: radiusMeter,
-        color:"#2563eb",
-        fillColor:"#2563eb",
-        fillOpacity:0.08
-      }
-    ).addTo(markerGroup);
-
-    const filtered = [];
-
-    data.forEach(item => {
-
-      const dist = map.distance(
-        [lat, lng],
-        [item.위도, item.경도]
-      );
-
-      if(dist <= radiusMeter){
-
-        filtered.push(item);
-
-        const icon = buildMarkerIcon(item.마커색상);
-
-        const marker = L.marker(
-          [item.위도, item.경도],
-          { icon }
-        );
-const popupHtml = `
-<div class="popup-wrap">
-
-<img class="popup-img" src="${escapeHtml(item.사진URL)}" alt="현장 사진">
-
-<div class="popup-title">${escapeHtml(item.구분)}</div>
-
-<div class="popup-meta">
-순번: ${escapeHtml(item.순번)}<br>
-시군구: ${escapeHtml(item.시군구)}<br>
-읍면동: ${escapeHtml(item.읍면동)}<br>
-날짜: ${escapeHtml(item.날짜)}<br>
-주소: ${escapeHtml(item.주소)}
-</div>
-
-<div class="popup-desc">
-${escapeHtml(item.사고설명)}
-</div>
-
-<div style="margin-top:10px;">
-<a 
-href="https://map.naver.com/v5/search/${encodeURIComponent(item.주소)}"
-target="_blank"
-style="
-display:block;
-text-align:center;
-background:#03C75A;
-color:#ffffff;
-font-weight:700;
-padding:8px;
-border-radius:8px;
-text-decoration:none;
-font-size:13px;
-">
-네이버지도 길찾기
-</a>
-</div>
-
-</div>
-`;
-
-marker.bindPopup(popupHtml, { maxWidth: 290 });
-
-        markerGroup.addLayer(marker);
-
-      }
-
-    });
-
-    if(filtered.length === 0){
-
-  showMsg(`${km}km 안에 위험지역이 없습니다.`);
-
-  return;
-}
-
-    const bounds = [
-      [lat, lng],
-      ...filtered.map(item => [item.위도, item.경도])
-    ];
-
-    document.getElementById("countTotal").textContent = filtered.length;
-    document.getElementById("countCity").textContent = "내 주변";
-
-    map.fitBounds(bounds, { padding:[40,40] });
-
-    if(isMobile()){
-      syncToMobileMap(filtered, lat, lng, radiusMeter);
+    {
+      enableHighAccuracy:false,
+      timeout:5000,
+      maximumAge:60000
     }
 
-  },
-  err => {
-    showMsg("위치를 가져올 수 없습니다.");
-  },
-  {
-    enableHighAccuracy:false,
-    timeout:5000,
-    maximumAge:60000
+  );
+
+}
+
+
+async function runRadius(lat,lng,km){
+
+  const res = await fetch("/data");
+  const data = await res.json();
+
+  markerGroup.clearLayers();
+
+  const radiusMeter = km * 1000;
+
+  L.marker(
+    [lat,lng],
+    { icon: buildUserIcon() }
+  ).addTo(markerGroup);
+
+  L.circle(
+    [lat,lng],
+    {
+      radius: radiusMeter,
+      color:"#2563eb",
+      fillColor:"#2563eb",
+      fillOpacity:0.08
+    }
+  ).addTo(markerGroup);
+
+  const filtered = [];
+
+  data.forEach(item=>{
+
+    const dist = map.distance(
+      [lat,lng],
+      [item.위도,item.경도]
+    );
+
+    if(dist <= radiusMeter){
+      filtered.push(item);
+    }
+
   });
+
+  if(filtered.length === 0){
+    showMsg(`${km}km 안에 위험지역이 없습니다.`);
+    return;
+  }
+
+  if(isMobile()){
+    syncToMobileMap(filtered,lat,lng,radiusMeter);
+  }
 
 }
 
