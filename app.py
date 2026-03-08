@@ -9,7 +9,8 @@ from urllib.parse import quote
 
 app = Flask(__name__)
 
-FILE_PATH = "mapdata_geocoded.xlsx"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FILE_PATH = os.path.join(BASE_DIR, "mapdata_geocoded.xlsx")
 DATA_CACHE = None
 
 TYPE_COLORS = {
@@ -217,13 +218,15 @@ html,body{
 .brand-title{
   display:flex;
   align-items:center;
-  gap:8px;
+  justify-content:center;
+  gap:10px;
 
   font-size:22px;
   font-weight:900;
   margin:0;
   line-height:1.2;
 }
+
 .brand-sub{
   font-size:13px;
   color:#64748b;
@@ -231,11 +234,17 @@ html,body{
 }
 
 .ci-logo{
-  height:22px;
+  height:48px;
   object-fit:contain;
-
-  margin-left:12px;
+  margin-left:8px;
 }
+
+@media (max-width:900px){
+  .ci-logo{
+    height:44px;
+  }
+}
+
 .logo{
   width:48px;
   height:48px;
@@ -542,16 +551,26 @@ position:absolute;
 bottom:20px;
 right:20px;
 z-index:1000;
-background:#2563eb;
-color:white;
-border:none;
-padding:10px 14px;
-border-radius:10px;
-font-size:14px;
-cursor:pointer;
-box-shadow:0 4px 10px rgba(0,0,0,0.2);
-}
 
+width:46px;
+height:46px;
+
+border-radius:50%;
+border:none;
+
+background:#ffffff;
+color:#2563eb;
+
+font-size:20px;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+box-shadow:0 6px 16px rgba(0,0,0,0.25);
+
+cursor:pointer;
+}
 
 
 @media (max-width:900px){
@@ -718,17 +737,30 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
 
 #mobileLocBtn{
 position:absolute;
-bottom:250px;
+bottom:20px;
 right:20px;
 z-index:4000;
+
+width:52px;
+height:52px;
+
+border-radius:50%;
+border:none;
+
 background:#2563eb;
 color:white;
-border:none;
-padding:10px 14px;
-border-radius:10px;
-font-size:16px;
-box-shadow:0 4px 10px rgba(0,0,0,0.2);
+
+font-size:22px;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+box-shadow:0 6px 16px rgba(0,0,0,0.25);
+
+cursor:pointer;
 }
+
 
 </style>
 </head>
@@ -1464,10 +1496,14 @@ async function findNearest(){
   }
 
   navigator.geolocation.getCurrentPosition(
+
   async pos => {
 
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
+
+    userLat = lat;
+    userLng = lng;
 
     const res = await fetch("/data");
     const data = await res.json();
@@ -1497,11 +1533,9 @@ async function findNearest(){
     });
 
     if(!nearest){
-
-  showMsg("주변 위험지역이 없습니다.");
-
-  return;
-}
+      showMsg("주변 위험지역이 없습니다.");
+      return;
+    }
 
     const icon = buildMarkerIcon(nearest.마커색상);
 
@@ -1510,7 +1544,7 @@ async function findNearest(){
       { icon }
     );
 
-const popupHtml = `
+    const popupHtml = `
 <div class="popup-wrap">
 
 <img class="popup-img" src="${escapeHtml(nearest.사진URL)}" alt="현장 사진">
@@ -1551,6 +1585,7 @@ font-size:13px;
 </div>
 `;
 
+
 marker.bindPopup(popupHtml, { maxWidth: 290 });
 
     markerGroup.addLayer(marker);
@@ -1588,6 +1623,9 @@ async function findRadius(km){
 
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
+
+    userLat = lat;
+    userLng = lng;
 
     const res = await fetch("/data");
     const data = await res.json();
