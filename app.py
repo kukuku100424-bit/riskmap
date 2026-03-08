@@ -897,12 +897,20 @@ function buildMarkerIcon(color){
 function buildUserIcon(){
   return L.divIcon({
     className: "",
-    html: `<div class="user-pin"></div>`,
-    iconSize: [34, 34],
-    iconAnchor: [17, 17]
+    html: `
+      <div style="
+        width:28px;
+        height:28px;
+        border-radius:50%;
+        background:#22c55e;
+        border:4px solid white;
+        box-shadow:0 0 0 6px rgba(34,197,94,0.25);
+      "></div>
+    `,
+    iconSize: [28,28],
+    iconAnchor: [14,14]
   });
 }
-
 
 function escapeHtml(text){
   if(text === null || text === undefined) return "";
@@ -1072,7 +1080,11 @@ window.addEventListener("DOMContentLoaded", function(){
 
   createCategoryChecks();
 
-  loadMeta().then(loadData);
+  if(isMobile()){
+    loadMeta();          // 모바일은 메타만 불러옴
+  }else{
+    loadMeta().then(loadData);  // PC는 바로 지도 표시
+  }
 
 });
 
