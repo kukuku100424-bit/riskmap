@@ -10,6 +10,7 @@ from urllib.parse import quote
 app = Flask(__name__)
 
 FILE_PATH = "mapdata_geocoded.xlsx"
+DATA_CACHE = None
 
 TYPE_COLORS = {
     "교통사고다발구역": "#ef4444",
@@ -94,6 +95,12 @@ def build_photo_url(row):
 
 
 def load_df():
+
+    global DATA_CACHE
+
+    if DATA_CACHE is not None:
+        return DATA_CACHE
+
     if not os.path.exists(FILE_PATH):
         raise FileNotFoundError(f"{FILE_PATH} 파일이 없습니다.")
 
@@ -125,7 +132,8 @@ def load_df():
     # 좌표 없는 건 자동 제외
     df = df[df["위도"].notna() & df["경도"].notna()].copy()
 
-    return df
+    DATA_CACHE = df
+    return DATA_CACHE
 
 
 def row_to_dict(row):
