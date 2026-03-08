@@ -1494,9 +1494,27 @@ if(userLat && userLng){
 async function findNearest(){
 
   if(userLat && userLng){
-    runNearest(userLat,userLng);
-    return;
-  }
+  runNearest(userLat,userLng);
+  return;
+}
+
+// GPS 다시 시도
+navigator.geolocation.getCurrentPosition(
+pos=>{
+  userLat = pos.coords.latitude;
+  userLng = pos.coords.longitude;
+
+  runNearest(userLat,userLng);
+},
+err=>{
+  showMsg("위치를 가져올 수 없습니다. 내 위치 버튼을 먼저 눌러주세요.");
+},
+{
+  enableHighAccuracy:false,
+  timeout:6000,
+  maximumAge:60000
+}
+);
 
   if(!navigator.geolocation){
     showMsg("GPS를 지원하지 않는 기기입니다.");
