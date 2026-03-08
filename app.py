@@ -403,11 +403,12 @@ html,body{
 }
 
 .map-legend-dot{
-  width:15px;
-  height:15px;
+  width:18px;
+  height:18px;
   border-radius:50%;
+  flex-shrink:0;
+  display:inline-block;
 }
-
 .loading{
   position:absolute;
   left:50%;
@@ -541,6 +542,8 @@ cursor:pointer;
 box-shadow:0 4px 10px rgba(0,0,0,0.2);
 }
 
+
+
 @media (max-width:900px){
 
 .map-legend{
@@ -551,8 +554,12 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
   padding:8px;
 }
 
+.map-legend-dot{
+  width:16px;
+  height:16px;
 }
 
+}
 .mobile-map-popup .map-legend{
   position:absolute;
   top:70px;
@@ -697,6 +704,20 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
 .mobile-result-distance{
   font-size:12px;
   color:#2563eb;
+}
+
+#mobileLocBtn{
+position:absolute;
+bottom:20px;
+right:20px;
+z-index:4000;
+background:#2563eb;
+color:white;
+border:none;
+padding:10px 14px;
+border-radius:10px;
+font-size:16px;
+box-shadow:0 4px 10px rgba(0,0,0,0.2);
 }
 
 </style>
@@ -900,7 +921,7 @@ function calcDistance(lat1, lng1, lat2, lng2){
 }
 
 function showMobileResults(items, userLat, userLng){
-
+history.pushState({mobileResult:true}, "");
   const panel = document.getElementById("mobileResultPanel");
   const list = document.getElementById("mobileResultList");
 
@@ -1206,7 +1227,11 @@ function isMobile(){
 }
 
 function openMobileMap(){
-  history.pushState({mobileMap:true}, "");
+
+  if(!history.state || !history.state.mobileMap){
+    history.pushState({mobileMap:true}, "");
+  }
+
   if(!isMobile()) return;
 
   const popup = document.getElementById("mobileMapPopup");
@@ -1215,6 +1240,9 @@ function openMobileMap(){
   const mapDiv = document.getElementById("mobileMap");
 
   if(!window.mobileLeafletMap){
+
+    
+
     window.mobileLeafletMap = L.map(mapDiv).setView([34.85, 126.90], 9);
 
     L.tileLayer(
@@ -1237,8 +1265,17 @@ function openMobileMap(){
 }
 
 function closeMobileMap(){
+
   document.getElementById("mobileMapPopup").style.display = "none";
+
+  const result = document.getElementById("mobileResultPanel");
+
+  if(result){
+    result.style.display = "none";
+  }
+
 }
+
 
 function syncToMobileMap(items, userLat=null, userLng=null, radiusMeter=null){
 
@@ -1262,7 +1299,9 @@ function syncToMobileMap(items, userLat=null, userLng=null, radiusMeter=null){
 
   openMobileMap();
 
+  if(window.mobileMarkerGroup){
   window.mobileMarkerGroup.clearLayers();
+}
 
   const bounds = [];
 
@@ -1576,16 +1615,56 @@ window.addEventListener("DOMContentLoaded", function(){
   }
 
 });
-window.addEventListener("popstate", function(e){
+window.addEventListener("popstate", function(){
 
-  const popup = document.getElementById("mobileMapPopup");
+const popup = document.getElementById("mobileMapPopup");
+const result = document.getElementById("mobileResultPanel");
 
-  if(popup.style.display === "flex"){
-    popup.style.display = "none";
-    history.replaceState(null, "", location.href);
-  }
+if(result && result.style.display === "flex"){
+  result.style.display = "none";
+  return;
+}
+
+if(popup && popup.style.display === "flex"){
+  popup.style.display = "none";
+  return;
+}
 
 });
+
+window.addEventListener("DOMContentLoaded", function(){
+
+const mobileBtn = document.getElementById("mobileLocBtn");
+
+if(mobileBtn){
+
+mobileBtn.onclick = function(){
+
+if(!navigator.geolocation){
+  alert("GPS를 지원하지 않습니다.");
+  return;
+}
+
+navigator.geolocation.getCurrentPosition(pos=>{
+const lat = pos.coords.latitude;
+const lng = pos.coords.longitude;
+
+if(window.mobileLeafletMap){
+  window.mobileLeafletMap.setView([lat,lng],15);
+}
+
+if(window.mobileMarkerGroup){
+  L.marker([lat,lng],{icon:buildUserIcon()})
+  .addTo(window.mobileMarkerGroup);
+}
+});
+
+};
+
+}
+
+});
+
 </script>
 
 <div class="mobile-result-panel" id="mobileResultPanel">
@@ -1603,6 +1682,7 @@ window.addEventListener("popstate", function(e){
   </div>
 
   <div id="mobileMap" class="mobile-map"></div>
+  <button id="mobileLocBtn">📍</button>
 
   <div class="map-legend">
 
@@ -1631,7 +1711,7 @@ window.addEventListener("popstate", function(e){
       우범지역
     </div>
 <div class="map-legend-item">
-  <span class="user-legend-dot"></span>
+  <span class="map-legend-dot" style="background:#22c55e"></span>
   내 위치
 </div>
 
