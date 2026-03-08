@@ -657,6 +657,48 @@ box-shadow:0 4px 10px rgba(0,0,0,0.2);
   border:1px solid #cbd5e1;
 }
 
+.mobile-result-panel{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:220px;
+  background:white;
+  border-top-left-radius:16px;
+  border-top-right-radius:16px;
+  box-shadow:0 -6px 20px rgba(0,0,0,.15);
+  z-index:3000;
+  display:none;
+  flex-direction:column;
+}
+
+.mobile-result-header{
+  padding:10px 14px;
+  font-weight:700;
+  border-bottom:1px solid #e5e7eb;
+}
+
+.mobile-result-list{
+  overflow:auto;
+  flex:1;
+}
+
+.mobile-result-item{
+  padding:10px 14px;
+  border-bottom:1px solid #f1f5f9;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.mobile-result-item:hover{
+  background:#f8fafc;
+}
+
+.mobile-result-distance{
+  font-size:12px;
+  color:#2563eb;
+}
+
 </style>
 </head>
 <body>
@@ -838,6 +880,67 @@ function setLoading(show){
   document.getElementById("loadingBox").style.display = show ? "block" : "none";
 }
 
+function calcDistance(lat1, lng1, lat2, lng2){
+
+  const R = 6371000;
+
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLng = (lng2-lng1) * Math.PI/180;
+
+  const a =
+    Math.sin(dLat/2)*Math.sin(dLat/2) +
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLng/2)*Math.sin(dLng/2);
+
+  const c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+
+  return R*c;
+
+}
+
+function showMobileResults(items, userLat, userLng){
+
+  const panel = document.getElementById("mobileResultPanel");
+  const list = document.getElementById("mobileResultList");
+
+  panel.style.display = "flex";
+
+  list.innerHTML = "";
+
+  items.forEach(item=>{
+
+    const dist = Math.round(
+      calcDistance(userLat,userLng,item.위도,item.경도)
+    );
+
+    const el = document.createElement("div");
+
+    el.className = "mobile-result-item";
+
+    el.innerHTML = `
+      <b>${item.구분}</b><br>
+      ${item.시군구} ${item.읍면동}<br>
+      <span class="mobile-result-distance">${dist} m</span>
+    `;
+
+    el.onclick = function(){
+
+      window.mobileLeafletMap.setView(
+        [item.위도,item.경도],16
+      );
+
+    };
+
+    list.appendChild(el);
+
+  });
+
+  document.getElementById("mobileResultCount").textContent = items.length;
+
+}
+
+
 function createCategoryChecks(){
   const box = document.getElementById("categoryBox");
   box.innerHTML = "";
@@ -898,19 +1001,12 @@ function buildUserIcon(){
   return L.divIcon({
     className: "",
     html: `
-      <div style="
-        width:28px;
-        height:28px;
-        border-radius:50%;
-        background:#22c55e;
-        border:4px solid white;
-        box-shadow:0 0 0 6px rgba(34,197,94,0.25);
-      "></div>
+      <div class="user-pin"></div>
     `,
-    iconSize: [28,28],
-    iconAnchor: [14,14]
+    iconSize: [34,34],
+    iconAnchor: [17,17]
   });
-}
+} 
 
 function escapeHtml(text){
   if(text === null || text === undefined) return "";
@@ -1141,7 +1237,24 @@ function closeMobileMap(){
 }
 
 function syncToMobileMap(items, userLat=null, userLng=null, radiusMeter=null){
+
   if(!isMobile()) return;
+
+  if(userLat && userLng){
+
+    items.sort((a,b)=>{
+
+      const da = calcDistance(userLat,userLng,a.위도,a.경도);
+      const db = calcDistance(userLat,userLng,b.위도,b.경도);
+
+      return da-db;
+
+    });
+
+  }
+
+
+
 
   openMobileMap();
 
@@ -1232,7 +1345,6 @@ window.mobileMarkerGroup.addLayer(userMarker);
             </a>
           </div>
         </div>
-      </div>
     `;
 
     marker.bindPopup(popupHtml, { maxWidth: 290 });
@@ -1249,10 +1361,14 @@ window.mobileMarkerGroup.addLayer(userMarker);
       window.mobileLeafletMap.setView([34.85, 126.90], 9);
     }
   }, 250);
+
+
+// 🔵 여기 추가
+if(userLat && userLng){
+  showMobileResults(items,userLat,userLng);
 }
 
-
-  
+}  
 
 
 
@@ -1467,6 +1583,13 @@ window.addEventListener("popstate", function(e){
 
 });
 </script>
+
+<div class="mobile-result-panel" id="mobileResultPanel">
+  <div class="mobile-result-header">
+    검색 결과 <span id="mobileResultCount">0</span>건
+  </div>
+  <div class="mobile-result-list" id="mobileResultList"></div>
+</div>
 
 <div class="mobile-map-popup" id="mobileMapPopup">
 
