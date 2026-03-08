@@ -350,11 +350,16 @@ html,body{
   font-size:12px;
   color:#64748b;
 }
+
+
+@media (max-width:900px){
+
 .legend{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
+display:none;
 }
+
+}
+
 .legend-item{
   display:flex;
   align-items:center;
@@ -1137,24 +1142,7 @@ async function loadData(){
             </a>
           </div>
 
-          <div style="margin-top:6px;">
-            <a 
-              href="nmap://navigation?dlat=${item.위도}&dlng=${item.경도}&dname=위험지역&appname=riskmap"
-              style="
-                display:block;
-                text-align:center;
-                background:#111827;
-                color:#ffffff;
-                font-weight:700;
-                padding:8px;
-                border-radius:8px;
-                text-decoration:none;
-                font-size:13px;
-              ">
-              네이버 네비 바로 실행
-            </a>
-          </div>
-        </div>
+                  </div>
       `;
 
       marker.bindPopup(popupHtml, { maxWidth: 290 });
@@ -1377,24 +1365,6 @@ window.mobileMarkerGroup.addLayer(userMarker);
               네이버지도 길찾기
             </a>
           </div>
-
-          <div style="margin-top:6px;">
-            <a 
-              href="nmap://navigation?dlat=${item.위도}&dlng=${item.경도}&dname=위험지역&appname=riskmap"
-              style="
-                display:block;
-                text-align:center;
-                background:#111827;
-                color:#ffffff;
-                font-weight:700;
-                padding:8px;
-                border-radius:8px;
-                text-decoration:none;
-                font-size:13px;
-              ">
-              네이버 네비 바로 실행
-            </a>
-          </div>
         </div>
     `;
 
@@ -1422,8 +1392,6 @@ if(userLat && userLng){
 }  
 
 
-
-
 async function findNearest(){
 
   if(!navigator.geolocation){
@@ -1431,7 +1399,8 @@ async function findNearest(){
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(async pos => {
+  navigator.geolocation.getCurrentPosition(
+  async pos => {
 
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
@@ -1445,6 +1414,7 @@ async function findNearest(){
       [lat, lng],
       { icon: buildUserIcon() }
     ).addTo(markerGroup);
+
     let nearest = null;
     let minDist = Infinity;
 
@@ -1463,7 +1433,7 @@ async function findNearest(){
     });
 
     if(!nearest){
-      alert("주변 위험지역을 찾지 못했습니다.");
+      alert("주변 위험지역이 없습니다.");
       return;
     }
 
@@ -1474,21 +1444,52 @@ async function findNearest(){
       { icon }
     );
 
-    marker.bindPopup(`
-      <div style="font-size:13px;">
-      <b>가장 가까운 위험지역</b><br>
-      ${nearest.구분}<br>
-      ${nearest.시군구} ${nearest.읍면동}<br>
-      ${nearest.주소}
-      </div>
-    `).openPopup();
+const popupHtml = `
+<div class="popup-wrap">
+
+<img class="popup-img" src="${escapeHtml(nearest.사진URL)}" alt="현장 사진">
+
+<div class="popup-title">${escapeHtml(nearest.구분)}</div>
+
+<div class="popup-meta">
+순번: ${escapeHtml(nearest.순번)}<br>
+시군구: ${escapeHtml(nearest.시군구)}<br>
+읍면동: ${escapeHtml(nearest.읍면동)}<br>
+날짜: ${escapeHtml(nearest.날짜)}<br>
+주소: ${escapeHtml(nearest.주소)}
+</div>
+
+<div class="popup-desc">
+${escapeHtml(nearest.사고설명)}
+</div>
+
+<div style="margin-top:10px;">
+<a 
+href="https://map.naver.com/v5/search/${encodeURIComponent(nearest.주소)}"
+target="_blank"
+style="
+display:block;
+text-align:center;
+background:#03C75A;
+color:#ffffff;
+font-weight:700;
+padding:8px;
+border-radius:8px;
+text-decoration:none;
+font-size:13px;
+">
+네이버지도 길찾기
+</a>
+</div>
+
+</div>
+`;
+
+marker.bindPopup(popupHtml, { maxWidth: 290 });
 
     markerGroup.addLayer(marker);
 
-    map.fitBounds([
-      [lat, lng],
-      [nearest.위도, nearest.경도]
-    ], { padding:[40,40] });
+    map.setView([nearest.위도, nearest.경도], 16);
 
     document.getElementById("countTotal").textContent = 1;
     document.getElementById("countCity").textContent = "내 주변";
@@ -1497,10 +1498,17 @@ async function findNearest(){
       syncToMobileMap([nearest], lat, lng, null);
     }
 
+  },
+  err => {
+    alert("위치를 가져올 수 없습니다.");
+  },
+  {
+    enableHighAccuracy:false,
+    timeout:5000,
+    maximumAge:60000
   });
 
 }
-    
 
 async function findRadius(km){
 
@@ -1509,7 +1517,8 @@ async function findRadius(km){
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(async pos => {
+  navigator.geolocation.getCurrentPosition(
+  async pos => {
 
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
@@ -1555,8 +1564,48 @@ async function findRadius(km){
           [item.위도, item.경도],
           { icon }
         );
+const popupHtml = `
+<div class="popup-wrap">
 
-        marker.bindPopup(item.구분);
+<img class="popup-img" src="${escapeHtml(item.사진URL)}" alt="현장 사진">
+
+<div class="popup-title">${escapeHtml(item.구분)}</div>
+
+<div class="popup-meta">
+순번: ${escapeHtml(item.순번)}<br>
+시군구: ${escapeHtml(item.시군구)}<br>
+읍면동: ${escapeHtml(item.읍면동)}<br>
+날짜: ${escapeHtml(item.날짜)}<br>
+주소: ${escapeHtml(item.주소)}
+</div>
+
+<div class="popup-desc">
+${escapeHtml(item.사고설명)}
+</div>
+
+<div style="margin-top:10px;">
+<a 
+href="https://map.naver.com/v5/search/${encodeURIComponent(item.주소)}"
+target="_blank"
+style="
+display:block;
+text-align:center;
+background:#03C75A;
+color:#ffffff;
+font-weight:700;
+padding:8px;
+border-radius:8px;
+text-decoration:none;
+font-size:13px;
+">
+네이버지도 길찾기
+</a>
+</div>
+
+</div>
+`;
+
+marker.bindPopup(popupHtml, { maxWidth: 290 });
 
         markerGroup.addLayer(marker);
 
@@ -1579,8 +1628,8 @@ async function findRadius(km){
       ...filtered.map(item => [item.위도, item.경도])
     ];
 
-document.getElementById("countTotal").textContent = filtered.length;
-document.getElementById("countCity").textContent = "내 주변";
+    document.getElementById("countTotal").textContent = filtered.length;
+    document.getElementById("countCity").textContent = "내 주변";
 
     map.fitBounds(bounds, { padding:[40,40] });
 
@@ -1588,9 +1637,18 @@ document.getElementById("countCity").textContent = "내 주변";
       syncToMobileMap(filtered, lat, lng, radiusMeter);
     }
 
+  },
+  err => {
+    alert("위치를 가져올 수 없습니다.");
+  },
+  {
+    enableHighAccuracy:false,
+    timeout:5000,
+    maximumAge:60000
   });
 
 }
+
 window.addEventListener("DOMContentLoaded", function(){
 
   const locBtn = document.getElementById("locBtn");
