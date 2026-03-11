@@ -9,25 +9,19 @@ from urllib.parse import quote
 
 app = Flask(__name__)
 
+app.config["JSON_AS_ASCII"] = False
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FILE_PATH = os.path.join(BASE_DIR, "mapdata_geocoded.xlsx")
+FILE_PATH = "mapdata_geocoded.xlsx"
 DATA_CACHE = None
 
 TYPE_COLORS = {
-    "교통사고다발구역": "#ef4444",
-    "상습결빙구역": "#06b6d4",
     "상습결빙지역": "#06b6d4",
-    "상습침수구역": "#2563eb",
-    "화재다빈도발생구역": "#f97316",
-    "우범지역": "#7c3aed",
+    "공중화장실": "#f59e0b"
 }
 
 TYPE_ORDER = [
-    "교통사고다발구역",
-    "상습결빙구역",
-    "상습침수구역",
-    "화재다빈도발생구역",
-    "우범지역",
+    "상습결빙지역",
+    "공중화장실"
 ]
 
 DEFAULT_CENTER = [34.85, 126.90]
@@ -59,40 +53,36 @@ def extract_town_from_address(address):
 
 
 def sample_desc(category, city, town, address):
-    if category == "교통사고다발구역":
-        return f"{city} {town} 일대 교차로·차량 진출입이 잦아 사고 위험이 높은 지역으로 가정한 샘플 설명입니다."
-    if category in ["상습결빙구역", "상습결빙지역"]:
-        return f"{city} {town} 일대는 겨울철 노면 결빙 우려가 높은 구간으로 가정한 샘플 설명입니다."
-    if category == "상습침수구역":
-        return f"{city} {town} 일대는 집중호우 시 배수 지연 및 도로 침수가 반복될 수 있는 구간으로 가정한 샘플 설명입니다."
-    if category == "화재다빈도발생구역":
-        return f"{city} {town} 일대는 화재 발생 빈도가 상대적으로 높다고 가정한 샘플 설명입니다."
-    if category == "우범지역":
-        return f"{city} {town} 일대는 야간 보행 시 주의가 필요한 구역으로 가정한 샘플 설명입니다."
-    return f"{city} {town} 위험지역 샘플 설명입니다. 주소: {address}"
+
+    if category == "상습결빙지역":
+        return f"{city} {town} 일대는 겨울철 노면 결빙 위험이 높은 구간입니다."
+
+    if category == "공중화장실":
+        return f"{city} {town} 인근 공중화장실 위치입니다."
+
+    return f"{city} {town} 위치 정보입니다."
 
 
 def sample_date(category):
+
     m = {
-        "교통사고다발구역": "2025-11-12",
-        "상습결빙구역": "2025-12-28",
         "상습결빙지역": "2025-12-28",
-        "상습침수구역": "2025-07-18",
-        "화재다빈도발생구역": "2025-10-03",
-        "우범지역": "2025-09-21",
+        "공중화장실": "2025-01-01"
     }
+
     return m.get(category, "2025-01-01")
 
-
 def build_photo_url(row):
-    raw = safe_str(row.get("사진URL", ""))
-    if raw:
-        return raw
 
-    category = quote(safe_str(row.get("구분", "")))
-    city = quote(safe_str(row.get("시군구", "")))
-    town = quote(safe_str(row.get("읍면동", "")))
-    return f"/sample-image?category={category}&city={city}&town={town}"
+    category = safe_str(row["구분"])
+
+    if category == "공중화장실":
+        return "/photo/111"
+
+    if category == "상습결빙지역":
+        return "/photo/222"
+
+    return "/photo/111"
 
 
 def load_df():
@@ -106,11 +96,15 @@ def load_df():
         raise FileNotFoundError(f"{FILE_PATH} 파일이 없습니다.")
 
     df = pd.read_excel(FILE_PATH)
+    print(df.columns)
 
-    required = ["순번", "구분", "시군구", "주소", "위도", "경도"]
+    required = ["순번", "구분", "시도", "시군구", "주소", "위도", "경도"]
     for col in required:
         if col not in df.columns:
             raise ValueError(f"엑셀에 '{col}' 열이 없습니다.")
+
+    if "시도" not in df.columns:
+        df["시도"] = ""
 
     if "읍면동" not in df.columns:
         df["읍면동"] = df["주소"].apply(extract_town_from_address)
@@ -124,8 +118,9 @@ def load_df():
     if "사진URL" not in df.columns:
         df["사진URL"] = ""
 
-    for col in ["구분", "시군구", "주소", "읍면동", "사고설명", "날짜", "사진URL"]:
+    for col in ["구분", "시도", "시군구", "주소", "읍면동", "사고설명", "날짜", "사진URL"]:
         df[col] = df[col].apply(safe_str)
+    df["구분"] = df["구분"].str.strip()
 
     df["위도"] = pd.to_numeric(df["위도"], errors="coerce")
     df["경도"] = pd.to_numeric(df["경도"], errors="coerce")
@@ -139,6 +134,7 @@ def load_df():
 
 def row_to_dict(row):
     category = safe_str(row["구분"])
+    province = safe_str(row["시도"])
     city = safe_str(row["시군구"])
     town = safe_str(row["읍면동"])
     address = safe_str(row["주소"])
@@ -152,6 +148,7 @@ def row_to_dict(row):
         date_value = sample_date(category)
 
     return {
+        "시도": province,
         "순번": safe_str(row["순번"]),
         "구분": category,
         "시군구": city,
@@ -191,10 +188,12 @@ html,body{
 }
 .page{
   display:flex;
+  flex-direction:row;
   width:100%;
   height:100vh;
   overflow:hidden;
 }
+
 .sidebar{
   width:360px;
   min-width:360px;
@@ -321,11 +320,19 @@ html,body{
   flex:0 0 12px;
 }
 .btn-row{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-  margin-top:14px;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:14px;
+margin-top:14px;
+margin-bottom:6px;
 }
+
+.sidebar .btn{
+  height:46px;
+  font-size:14px;
+  margin-top:8px;
+}
+
 .btn{
   cursor:pointer;
   font-weight:800;
@@ -456,8 +463,8 @@ display:none;
 }
 .popup-img{
   width:100%;
-  height:136px;
-  object-fit:cover;
+  height:160px;
+  object-fit:contain;
   border-radius:12px;
   border:1px solid #e5e7eb;
   margin-bottom:10px;
@@ -697,11 +704,13 @@ cursor:pointer;
 }
 
 .mobile-result-panel{
-  position:fixed;
+  position:absolute;
   bottom:0;
-  left:0;
+  left:360px;
   right:0;
-  height:220px;
+  width:auto;
+  height:180px;
+  max-height:40%;
   background:white;
   border-top-left-radius:16px;
   border-top-right-radius:16px;
@@ -764,6 +773,11 @@ box-shadow:0 6px 16px rgba(0,0,0,0.25);
 cursor:pointer;
 }
 
+.sidebar .btn{
+height:46px;
+font-size:14px;
+margin-top:8px;
+}
 
 </style>
 </head>
@@ -782,20 +796,27 @@ cursor:pointer;
     <div class="brand-sub">엑셀 기반 위험정보 지도</div>
   </div>
 
-</div>    <div class="card">
+</div>    
+
+<div class="card">
       <h3>조회 조건</h3>
 
-      <label class="label">1. 시군구</label>
+      <label class="label">시도</label>
+      <select id="province" class="select">
+      <option value="">전체</option>
+      </select>
+
+      <label class="label">시군구</label>
       <select id="city" class="select">
         <option value="">전체</option>
       </select>
 
-      <label class="label">2. 읍면동</label>
+      <label class="label">읍면동</label>
       <select id="town" class="select">
         <option value="">전체</option>
       </select>
 
-      <label class="label">3. 구분</label>
+      <label class="label">구분</label>
       <div class="check-grid" id="categoryBox"></div>
 
             <div class="btn-row">
@@ -803,25 +824,16 @@ cursor:pointer;
         <button class="btn secondary" onclick="resetFilters()">필터 초기화</button>
       </div>
 
-<div class="location-box">
 
-<button class="btn secondary" onclick="findNearest()">
+<button class="btn secondary" onclick="findNearestToilet()">
+내 주변 화장실 찾기
+</button>
+
+
+<button class="btn secondary" onclick="findNearestDanger()">
 내 주변 위험지역 찾기
 </button>
 
-<div class="location-row">
-
-<button class="btn secondary" onclick="findRadius(1)">
-1km 위험지역
-</button>
-
-<button class="btn secondary" onclick="findRadius(3)">
-3km 위험지역
-</button>
-
-</div>
-
-</div>
 </div>
 
 <div class="card">
@@ -838,52 +850,31 @@ cursor:pointer;
       </div>
     </div>
 
-    <div class="card">
-        <div class="legend">
-        <div class="legend-item"><span class="dot" style="background:#ef4444"></span>교통사고다발구역</div>
-        <div class="legend-item"><span class="dot" style="background:#06b6d4"></span>상습결빙구역</div>
-        <div class="legend-item"><span class="dot" style="background:#2563eb"></span>상습침수구역</div>
-        <div class="legend-item"><span class="dot" style="background:#f97316"></span>화재다빈도발생구역</div>
-        <div class="legend-item"><span class="dot" style="background:#7c3aed"></span>우범지역</div>
-      </div>
-    </div>
-
   </aside>
 
   <main class="map-wrap">
     <div id="map"></div>
-    <button id="locBtn">📍 내 위치</button>
+    <button id="locBtn">📍</button>
     <div class="top-badge">모바일 / PC 지원</div>
 
 <div class="map-legend">
 
-  <div class="map-legend-item">
-    <span class="map-legend-dot" style="background:#ef4444"></span>
-    교통사고다발구역
-  </div>
+
 
   <div class="map-legend-item">
     <span class="map-legend-dot" style="background:#06b6d4"></span>
-    상습결빙구역
+    상습결빙지역
   </div>
 
   <div class="map-legend-item">
-    <span class="map-legend-dot" style="background:#2563eb"></span>
-    상습침수구역
+    <span class="map-legend-dot" style="background:#f59e0b"></span>
+    공중화장실
   </div>
 
-  <div class="map-legend-item">
-    <span class="map-legend-dot" style="background:#f97316"></span>
-    화재다빈도발생구역
-  </div>
 
-  <div class="map-legend-item">
-    <span class="map-legend-dot" style="background:#7c3aed"></span>
-    우범지역
-  </div>
 
 <div class="map-legend-item">
-  <span class="map-legend-dot" style="background:#22c55e"></span>
+  <span class="map-legend-dot" style="background:#2563eb"></span>
 내 위치
 </div>
 
@@ -898,22 +889,17 @@ cursor:pointer;
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script>
+
 const CATEGORY_COLORS = {
-  "교통사고다발구역": "#ef4444",
-  "상습결빙구역": "#06b6d4",
   "상습결빙지역": "#06b6d4",
-  "상습침수구역": "#2563eb",
-  "화재다빈도발생구역": "#f97316",
-  "우범지역": "#7c3aed"
+  "공중화장실": "#f59e0b"
 };
 
 const CATEGORY_LIST = [
-  "교통사고다발구역",
-  "상습결빙구역",
-  "상습침수구역",
-  "화재다빈도발생구역",
-  "우범지역"
+  "상습결빙지역",
+  "공중화장실"
 ];
+
 
 const map = L.map("map", { zoomControl:true }).setView([34.85, 126.90], 9);
 
@@ -922,8 +908,15 @@ let userLng = null;
 
 
 function showMsg(text){
-  document.getElementById("msgText").innerText = text;
-  document.getElementById("msgModal").style.display = "flex";
+
+  const modal = document.getElementById("msgModal");
+  const txt = document.getElementById("msgText");
+
+  if(!modal || !txt) return;
+
+  txt.innerText = text;
+  modal.style.display = "flex";
+
 }
 
 function closeMsg(){
@@ -935,28 +928,27 @@ function preloadLocation(){
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(
+navigator.geolocation.getCurrentPosition(
 
-    function(pos){
+  function(pos){
 
-      userLat = pos.coords.latitude;
-      userLng = pos.coords.longitude;
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+    console.log("사전 위치:", userLat, userLng, "정확도:", pos.coords.accuracy);
 
-    },
+  },
 
-    function(err){
-      console.log("위치 사전 요청 실패", err);
-    },
+  function(err){
+    console.log("위치 사전 요청 실패", err);
+  },
 
-    {
-      enableHighAccuracy:false,
-      timeout:4000,
-      maximumAge:60000
-    }
+  {
+    enableHighAccuracy:true,
+    timeout:10000,
+    maximumAge:0
+  }
 
-  );
-
-}
+);}
 
 
 L.tileLayer(
@@ -1055,6 +1047,26 @@ function createCategoryChecks(){
   });
 }
 
+function fillProvinces(provinces){
+
+  const select = document.getElementById("province");
+
+  select.innerHTML = '<option value="">전체</option>';
+
+  provinces.forEach(p=>{
+
+    const op = document.createElement("option");
+
+    op.value = p;
+
+    op.textContent = p;
+
+    select.appendChild(op);
+
+  });
+
+}
+
 function fillCities(cities){
   const select = document.getElementById("city");
   const current = select.value;
@@ -1097,14 +1109,17 @@ function buildMarkerIcon(color){
 
 function buildUserIcon(){
   return L.divIcon({
-    className: "",
-    html: `
-      <div class="user-pin"></div>
+    className:"",
+    html:`
+      <div class="user-marker-wrap">
+        <div class="user-marker-pulse"></div>
+        <div class="user-marker-dot"></div>
+      </div>
     `,
-    iconSize: [34,34],
-    iconAnchor: [17,17]
+    iconSize:[28,28],
+    iconAnchor:[14,14]
   });
-} 
+}
 
 function escapeHtml(text){
   if(text === null || text === undefined) return "";
@@ -1119,13 +1134,28 @@ function escapeHtml(text){
 async function loadMeta(){
   const res = await fetch("/meta");
   const data = await res.json();
+  fillProvinces(data.provinces || []);
   fillCities(data.cities || []);
   fillTowns(data.towns || []);
 }
 
+async function updateCities(){
+
+  const province = document.getElementById("province").value;
+
+  const res = await fetch(`/cities?province=${encodeURIComponent(province)}`);
+
+  const data = await res.json();
+
+  fillCities(data.cities || []);
+
+}
+
+
 async function updateTowns(){
+  const province = document.getElementById("province").value;
   const city = document.getElementById("city").value;
-  const res = await fetch(`/towns?city=${encodeURIComponent(city)}`);
+  const res = await fetch(`/towns?province=${encodeURIComponent(province)}&city=${encodeURIComponent(city)}`);
   const data = await res.json();
   fillTowns(data.towns || []);
 }
@@ -1142,12 +1172,13 @@ async function loadData(){
     markerGroup.clearLayers();
   }
 
-
+  const province = document.getElementById("province").value;
   const city = document.getElementById("city").value;
   const town = document.getElementById("town").value;
   const categories = getCheckedCategories();
 
   const params = new URLSearchParams();
+  if(province) params.append("province", province);
   if(city) params.append("city", city);
   if(town) params.append("town", town);
   categories.forEach(cat => params.append("category", cat));
@@ -1171,15 +1202,14 @@ async function loadData(){
       const popupHtml = `
         <div class="popup-wrap">
 
-          <img class="popup-img" src="${escapeHtml(item.사진URL)}" alt="현장 사진">
+          <img class="popup-img" src="${item.사진URL}">
 
+</a>
           <div class="popup-title">${escapeHtml(item.구분)}</div>
 
           <div class="popup-meta">
-            순번: ${escapeHtml(item.순번)}<br>
             시군구: ${escapeHtml(item.시군구)}<br>
             읍면동: ${escapeHtml(item.읍면동)}<br>
-            날짜: ${escapeHtml(item.날짜)}<br>
             주소: ${escapeHtml(item.주소)}
           </div>
 
@@ -1187,25 +1217,44 @@ async function loadData(){
             ${escapeHtml(item.사고설명)}
           </div>
 
-          <div style="margin-top:10px;">
-            <a 
-              href="https://map.naver.com/v5/search/${encodeURIComponent(item.주소)}"
-              target="_blank"
-              style="
-                display:block;
-                text-align:center;
-                background:#03C75A;
-                color:#ffffff;
-                font-weight:700;
-                padding:8px;
-                border-radius:8px;
-                text-decoration:none;
-                font-size:13px;
-              ">
-              네이버지도 길찾기
-            </a>
-          </div>
+          
+<div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:6px;">
 
+<a 
+href="https://map.naver.com/v5/search/${encodeURIComponent(item.주소)}"
+target="_blank"
+style="
+display:block;
+text-align:center;
+background:#03C75A;
+color:#ffffff;
+font-weight:700;
+padding:8px;
+border-radius:8px;
+text-decoration:none;
+font-size:13px;
+">
+네이버 길찾기
+</a>
+
+<a 
+href="https://map.kakao.com/link/search/${encodeURIComponent(item.주소)}"
+target="_blank"
+style="
+display:block;
+text-align:center;
+background:#FEE500;
+color:#191919;
+font-weight:700;
+padding:8px;
+border-radius:8px;
+text-decoration:none;
+font-size:13px;
+">
+카카오 길찾기
+</a>
+
+</div>
                   </div>
       `;
 
@@ -1295,6 +1344,7 @@ window.addEventListener("DOMContentLoaded", function(){
 
   loadMeta().then(()=>{
     document.getElementById("city").addEventListener("change", updateTowns);
+    document.getElementById("province").addEventListener("change", updateCities);
 
     if(!isMobile()){
       loadData();
@@ -1394,9 +1444,8 @@ function syncToMobileMap(items, userLat=null, userLng=null, radiusMeter=null){
 
   openMobileMap();
 
-  if(window.mobileMarkerGroup){
   window.mobileMarkerGroup.clearLayers();
-}
+
 
   const bounds = [];
 
@@ -1430,15 +1479,16 @@ window.mobileMarkerGroup.addLayer(userMarker);
 
     const popupHtml = `
       <div class="popup-wrap">
-        <img class="popup-img" src="${escapeHtml(item.사진URL)}" alt="현장 사진">
+        <a href="${escapeHtml(item.사진URL)}" target="_blank">
+
+<img class="popup-img" src="${item.사진URL}">
+</a>
 
         <div class="popup-title">${escapeHtml(item.구분)}</div>
 
         <div class="popup-meta">
-          순번: ${escapeHtml(item.순번)}<br>
           시군구: ${escapeHtml(item.시군구)}<br>
           읍면동: ${escapeHtml(item.읍면동)}<br>
-          날짜: ${escapeHtml(item.날짜)}<br>
           주소: ${escapeHtml(item.주소)}
         </div>
 
@@ -1491,30 +1541,7 @@ if(userLat && userLng){
 }  
 
 
-async function findNearest(){
-
-  if(userLat && userLng){
-  runNearest(userLat,userLng);
-  return;
-}
-
-// GPS 다시 시도
-navigator.geolocation.getCurrentPosition(
-pos=>{
-  userLat = pos.coords.latitude;
-  userLng = pos.coords.longitude;
-
-  runNearest(userLat,userLng);
-},
-err=>{
-  showMsg("위치를 가져올 수 없습니다. 내 위치 버튼을 먼저 눌러주세요.");
-},
-{
-  enableHighAccuracy:false,
-  timeout:6000,
-  maximumAge:60000
-}
-);
+async function findNearestToilet(){
 
   if(!navigator.geolocation){
     showMsg("GPS를 지원하지 않는 기기입니다.");
@@ -1525,10 +1552,13 @@ err=>{
 
     pos=>{
 
-      userLat = pos.coords.latitude;
-      userLng = pos.coords.longitude;
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
 
-      runNearest(userLat,userLng);
+      userLat = lat;
+      userLng = lng;
+
+      runNearestSearch(lat,lng,"공중화장실");
 
     },
 
@@ -1537,110 +1567,148 @@ err=>{
     },
 
     {
-      enableHighAccuracy:false,
-      timeout:5000,
-      maximumAge:60000
+      enableHighAccuracy:true,
+      timeout:10000,
+      maximumAge:0
     }
 
   );
 
 }
 
+async function findNearestDanger(){
 
-async function runNearest(lat,lng){
+  if(!navigator.geolocation){
+    showMsg("GPS를 지원하지 않는 기기입니다.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+
+    pos=>{
+
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+
+      userLat = lat;
+      userLng = lng;
+
+      runNearestSearch(lat,lng,"상습결빙지역");
+
+    },
+
+    err=>{
+      showMsg("위치를 가져올 수 없습니다.");
+    },
+
+    {
+      enableHighAccuracy:true,
+      timeout:10000,
+      maximumAge:0
+    }
+
+  );
+
+}
+
+async function runNearestSearch(lat,lng,targetType){
 
   const res = await fetch("/data");
   const data = await res.json();
 
-  markerGroup.clearLayers();
+  const radius = 5000;
 
-  L.marker(
-    [lat,lng],
-    { icon: buildUserIcon() }
-  ).addTo(markerGroup);
+  const filtered = [];
 
-  let nearest = null;
-  let minDist = Infinity;
+  data.forEach(item=>{
+    
+    console.log(item.구분,targetType);
 
-  data.forEach(item => {
+    if(item.구분 !== targetType) return;
 
     const dist = map.distance(
       [lat,lng],
       [item.위도,item.경도]
     );
 
-    if(dist < minDist){
-      minDist = dist;
-      nearest = item;
+    if(dist <= radius){
+
+      item._dist = dist;
+
+      filtered.push(item);
+
     }
 
   });
 
-  if(!nearest){
-    showMsg("주변 위험지역이 없습니다.");
+  filtered.sort((a,b)=>a._dist-b._dist);
+  filtered.splice(10);
+
+  if(filtered.length === 0){
+
+    showMsg("주변에 데이터가 없습니다.");
+
     return;
+
   }
 
-  const icon = buildMarkerIcon(nearest.마커색상);
+map.setView([lat,lng],15);
+
+markerGroup.clearLayers();
+
+L.marker(
+  [lat,lng],
+  { icon: buildUserIcon() }
+).addTo(markerGroup);
+
+L.circle(
+  [lat,lng],
+  {
+    radius: radius,
+    color:"#2563eb",
+    fillColor:"#2563eb",
+    fillOpacity:0.08
+  }
+).addTo(markerGroup);
+
+filtered.forEach(item=>{
+
+  const icon = buildMarkerIcon(item.마커색상);
 
 const marker = L.marker(
-  [nearest.위도,nearest.경도],
+  [item.위도,item.경도],
   {icon}
 );
 
 const popupHtml = `
+
 <div class="popup-wrap">
 
-<img class="popup-img" src="${escapeHtml(nearest.사진URL)}">
-
-<div class="popup-title">${escapeHtml(nearest.구분)}</div>
+<img class="popup-img" src="${item.사진URL}"><div class="popup-title">${item.구분}</div>
 
 <div class="popup-meta">
-순번: ${escapeHtml(nearest.순번)}<br>
-시군구: ${escapeHtml(nearest.시군구)}<br>
-읍면동: ${escapeHtml(nearest.읍면동)}<br>
-날짜: ${escapeHtml(nearest.날짜)}<br>
-주소: ${escapeHtml(nearest.주소)}
+${item.시군구} ${item.읍면동}<br>
+${item.주소}
 </div>
 
 <div class="popup-desc">
-${escapeHtml(nearest.사고설명)}
-</div>
-
-<div style="margin-top:10px;">
-<a href="https://map.naver.com/v5/search/${encodeURIComponent(nearest.주소)}"
-target="_blank"
-style="
-display:block;
-text-align:center;
-background:#03C75A;
-color:#ffffff;
-font-weight:700;
-padding:8px;
-border-radius:8px;
-text-decoration:none;
-font-size:13px;
-">
-네이버지도 길찾기
-</a>
+${item.사고설명}
 </div>
 
 </div>
 `;
 
+
 marker.bindPopup(popupHtml,{maxWidth:290});
 
 markerGroup.addLayer(marker);
-  map.setView([nearest.위도,nearest.경도],16);
 
-  document.getElementById("countTotal").textContent = 1;
-  document.getElementById("countCity").textContent = "내 주변";
 
-  if(isMobile()){
-    syncToMobileMap([nearest],lat,lng,null);
-  }
+});
 
+showResultList(filtered,lat,lng);
 }
+
 
 async function findRadius(km){
 
@@ -1670,12 +1738,70 @@ async function findRadius(km){
     },
 
     {
-      enableHighAccuracy:false,
-      timeout:5000,
-      maximumAge:60000
+      enableHighAccuracy:true,
+      timeout:10000,
+      maximumAge:0
     }
 
   );
+
+}
+
+
+function showResultList(items, userLat, userLng){
+
+  const panel = document.getElementById("mobileResultPanel");
+  const list = document.getElementById("mobileResultList");
+
+  panel.style.display = "flex";
+  list.innerHTML = "";
+
+  items.forEach(item=>{
+
+    const dist = Math.round(
+      calcDistance(userLat,userLng,item.위도,item.경도)
+    );
+
+    const el = document.createElement("div");
+
+    el.className = "mobile-result-item";
+
+    el.innerHTML = `
+      <b>${item.구분}</b><br>
+      ${item.시군구} ${item.읍면동}<br>
+      <span class="mobile-result-distance">${dist} m</span>
+    `;
+
+    el.onclick = function(){
+
+  map.setView([item.위도,item.경도],16);
+
+  markerGroup.eachLayer(function(layer){
+
+    if(layer.getLatLng){
+
+      const latlng = layer.getLatLng();
+
+      if(
+      Math.abs(latlng.lat - item.위도) < 0.00001 &&
+      Math.abs(latlng.lng - item.경도) < 0.00001
+      ){
+      layer.openPopup();
+      }
+
+    }
+
+  });
+
+};
+
+    list.appendChild(el);
+
+  });
+
+  document.getElementById("mobileResultCount").textContent = items.length;
+  
+
 
 }
 
@@ -1749,9 +1875,14 @@ pos=>{
 const lat = pos.coords.latitude;
 const lng = pos.coords.longitude;
 
+userLat = lat;
+userLng = lng;
+
+console.log("내 위치 버튼:", lat, lng, "정확도:", pos.coords.accuracy);
+
 markerGroup.clearLayers();
 
-map.setView([lat, lng], 15);
+map.setView([lat, lng], 17);
 
 L.marker(
   [lat, lng],
@@ -1759,7 +1890,7 @@ L.marker(
 ).addTo(markerGroup);
 
 if(window.mobileLeafletMap){
-  window.mobileLeafletMap.setView([lat,lng],15);
+  window.mobileLeafletMap.setView([lat,lng],17);
 }
 
 if(window.mobileMarkerGroup){
@@ -1769,20 +1900,20 @@ if(window.mobileMarkerGroup){
   .addTo(window.mobileMarkerGroup);
 }
 
-
 },
 
 err=>{
-  showMsg("GPS를 지원하지 않는 기기입니다.");
+  showMsg("위치를 가져올 수 없습니다.");
 },
 
 {
-  enableHighAccuracy:false,
-  timeout:4000,
-  maximumAge:60000
+  enableHighAccuracy:true,
+  timeout:10000,
+  maximumAge:0
 }
 
 );
+
     };
   }
 
@@ -1817,13 +1948,20 @@ if(!navigator.geolocation){
   return;
 }
 
-navigator.geolocation.getCurrentPosition(pos=>{
+navigator.geolocation.getCurrentPosition(
+
+pos=>{
 const lat = pos.coords.latitude;
 const lng = pos.coords.longitude;
 
+userLat = lat;
+userLng = lng;
+
+console.log("모바일 위치 버튼:", lat, lng, "정확도:", pos.coords.accuracy);
+
 if(window.mobileLeafletMap){
 
-  window.mobileLeafletMap.setView([lat,lng],15);
+  window.mobileLeafletMap.setView([lat,lng],17);
 
   if(window.mobileMarkerGroup){
     window.mobileMarkerGroup.clearLayers();
@@ -1832,8 +1970,19 @@ if(window.mobileLeafletMap){
     .addTo(window.mobileMarkerGroup);
   }
 
-}});
+}},
 
+err=>{
+  showMsg("위치를 가져올 수 없습니다.");
+},
+
+{
+  enableHighAccuracy:true,
+  timeout:10000,
+  maximumAge:0
+}
+
+);
 };
 
 }
@@ -1862,32 +2011,19 @@ if(window.mobileLeafletMap){
 
   <div class="map-legend">
 
-    <div class="map-legend-item">
-      <span class="map-legend-dot" style="background:#ef4444"></span>
-      교통사고다발구역
-    </div>
 
     <div class="map-legend-item">
       <span class="map-legend-dot" style="background:#06b6d4"></span>
-      상습결빙구역
+      상습결빙지역
     </div>
 
     <div class="map-legend-item">
-      <span class="map-legend-dot" style="background:#2563eb"></span>
-      상습침수구역
+      <span class="map-legend-dot" style="background:#f59e0b"></span>
+      공중화장실
     </div>
 
-    <div class="map-legend-item">
-      <span class="map-legend-dot" style="background:#f97316"></span>
-      화재다빈도발생구역
-    </div>
-
-    <div class="map-legend-item">
-      <span class="map-legend-dot" style="background:#7c3aed"></span>
-      우범지역
-    </div>
 <div class="map-legend-item">
-  <span class="map-legend-dot" style="background:#22c55e"></span>
+  <span class="map-legend-dot" style="background:#2563eb"></span>
   내 위치
 </div>
 
@@ -1947,6 +2083,14 @@ cursor:pointer;
 def ci():
     return send_file("ci.png", mimetype="image/png")
 
+@app.route("/photo/111")
+def photo_toilet():
+    return send_file("111.png", mimetype="image/png")
+
+@app.route("/photo/222")
+def photo_ice():
+    return send_file("222.png", mimetype="image/png")
+
 @app.route("/")
 def index():
     return render_template_string(HTML)
@@ -1956,34 +2100,63 @@ def index():
 def meta():
     df = load_df()
 
+    provinces = sorted(df["시도"].dropna().astype(str).unique().tolist())
     cities = sorted(df["시군구"].dropna().astype(str).unique().tolist())
     towns = sorted(df["읍면동"].dropna().astype(str).unique().tolist())
 
     return jsonify({
+        "provinces": provinces,
         "cities": cities,
         "towns": towns
     })
 
+@app.route("/cities")
+def cities():
+
+    province = safe_str(request.args.get("province",""))
+
+    df = load_df()
+
+    if province:
+        df = df[df["시도"] == province]
+
+    cities = sorted(df["시군구"].dropna().astype(str).unique().tolist())
+
+    return jsonify({"cities":cities})
+
 
 @app.route("/towns")
 def towns():
-    city = safe_str(request.args.get("city", ""))
+
+    province = safe_str(request.args.get("province",""))
+    city = safe_str(request.args.get("city",""))
+
     df = load_df()
+
+    if province:
+        df = df[df["시도"] == province]
 
     if city:
         df = df[df["시군구"] == city]
 
-    town_list = sorted(df["읍면동"].dropna().astype(str).unique().tolist())
-    return jsonify({"towns": town_list})
+    towns = sorted(df["읍면동"].dropna().astype(str).unique().tolist())
+
+    return jsonify({"towns": towns})
+
 
 
 @app.route("/data")
 def data():
-    city = safe_str(request.args.get("city", ""))
-    town = safe_str(request.args.get("town", ""))
+
+    province = safe_str(request.args.get("province",""))
+    city = safe_str(request.args.get("city",""))
+    town = safe_str(request.args.get("town",""))
     categories = request.args.getlist("category")
 
     df = load_df()
+
+    if province:
+        df = df[df["시도"] == province]
 
     if city:
         df = df[df["시군구"] == city]
@@ -1994,7 +2167,8 @@ def data():
     if categories:
         df = df[df["구분"].isin(categories)]
 
-    records = [row_to_dict(row) for _, row in df.iterrows()]
+    records = df.apply(row_to_dict, axis=1).tolist()
+
     return jsonify(records)
 
 
