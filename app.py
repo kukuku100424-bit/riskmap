@@ -790,6 +790,17 @@ width:80px;
 animation:floatChar 2.2s ease-in-out infinite;
 }
 
+.loading-dots::after{
+content:"";
+animation:dots 1.4s steps(3,end) infinite;
+}
+
+@keyframes dots{
+0%{content:"";}
+33%{content:".";}
+66%{content:"..";}
+100%{content:"...";}
+}
 
 </style>
 </head>
@@ -961,7 +972,7 @@ flex-wrap:nowrap;
   ">
 
   <div style="font-size:15px;">
-  📍 위치 확인 중...
+  📍 위치 확인 중<span class="loading-dots"></span>
   </div>
 
   </div>
