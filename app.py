@@ -704,11 +704,11 @@ cursor:pointer;
 }
 
 .mobile-result-panel{
-  position:absolute;
-  bottom:0;
-  left:360px;
+  position:fixed;
+  left:0;
   right:0;
-  width:auto;
+  bottom:0;
+  width:100%;
   height:180px;
   max-height:40%;
   background:white;
@@ -1204,7 +1204,6 @@ async function loadData(){
 
           <img class="popup-img" src="${item.사진URL}">
 
-</a>
           <div class="popup-title">${escapeHtml(item.구분)}</div>
 
           <div class="popup-meta">
@@ -1472,55 +1471,78 @@ window.mobileMarkerGroup.addLayer(userMarker);
     }
   }
 
-  items.forEach(item=>{
-    const icon = buildMarkerIcon(item.마커색상);
+items.forEach(item=>{
 
-    const marker = L.marker([item.위도, item.경도], { icon });
+  const icon = buildMarkerIcon(item.마커색상);
 
-    const popupHtml = `
-      <div class="popup-wrap">
-        <a href="${escapeHtml(item.사진URL)}" target="_blank">
+  const marker = L.marker([item.위도,item.경도],{icon});
 
-<img class="popup-img" src="${item.사진URL}">
-</a>
+  const popupHtml = `
+  <div class="popup-wrap">
 
-        <div class="popup-title">${escapeHtml(item.구분)}</div>
+  <img class="popup-img" src="${item.사진URL}">
 
-        <div class="popup-meta">
-          시군구: ${escapeHtml(item.시군구)}<br>
-          읍면동: ${escapeHtml(item.읍면동)}<br>
-          주소: ${escapeHtml(item.주소)}
-        </div>
+  <div class="popup-title">${escapeHtml(item.구분)}</div>
 
-        <div class="popup-desc">
-          ${escapeHtml(item.사고설명)}
-        </div>
+  <div class="popup-meta">
+  시군구: ${escapeHtml(item.시군구)}<br>
+  읍면동: ${escapeHtml(item.읍면동)}<br>
+  주소: ${escapeHtml(item.주소)}
+  </div>
 
-          <div style="margin-top:10px;">
-            <a 
-              href="https://map.naver.com/v5/search/${encodeURIComponent(item.주소)}"
-              target="_blank"
-              style="
-                display:block;
-                text-align:center;
-                background:#03C75A;
-                color:#ffffff;
-                font-weight:700;
-                padding:8px;
-                border-radius:8px;
-                text-decoration:none;
-                font-size:13px;
-              ">
-              네이버지도 길찾기
-            </a>
-          </div>
-        </div>
-    `;
+  <div class="popup-desc">
+  ${escapeHtml(item.사고설명)}
+  </div>
 
-    marker.bindPopup(popupHtml, { maxWidth: 290 });
-    window.mobileMarkerGroup.addLayer(marker);
-    bounds.push([item.위도, item.경도]);
-  });
+  <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+
+  <a 
+  href="https://map.naver.com/v5/search/${encodeURIComponent(item.주소)}"
+  target="_blank"
+  style="
+  display:block;
+  text-align:center;
+  background:#03C75A;
+  color:#ffffff;
+  font-weight:700;
+  padding:8px;
+  border-radius:8px;
+  text-decoration:none;
+  font-size:13px;
+  ">
+  네이버 길찾기
+  </a>
+
+  <a 
+  href="https://map.kakao.com/link/search/${encodeURIComponent(item.주소)}"
+  target="_blank"
+  style="
+  display:block;
+  text-align:center;
+  background:#FEE500;
+  color:#191919;
+  font-weight:700;
+  padding:8px;
+  border-radius:8px;
+  text-decoration:none;
+  font-size:13px;
+  ">
+  카카오 길찾기
+  </a>
+
+  </div>
+
+  </div>
+  `;
+
+  marker.bindPopup(popupHtml,{maxWidth:290});
+
+  window.mobileMarkerGroup.addLayer(marker);
+
+  bounds.push([item.위도,item.경도]);
+
+});
+
 
   setTimeout(()=>{
     window.mobileLeafletMap.invalidateSize();
@@ -1651,6 +1673,11 @@ async function runNearestSearch(lat,lng,targetType){
     return;
 
   }
+
+if(isMobile()){
+  syncToMobileMap(filtered,lat,lng,5000);
+  return;
+}
 
 map.setView([lat,lng],15);
 
