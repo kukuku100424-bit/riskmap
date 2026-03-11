@@ -805,7 +805,7 @@ animation:floatChar 2.2s ease-in-out infinite;
       <img src="/ci" class="ci-logo">
     </div>
 
-    <div class="brand-sub">엑셀 기반 위험정보 지도</div>
+    <div class="brand-sub">자료제공: 행정안전부 생활안전지도(SafeMap)</div>
   </div>
 
 </div>    
@@ -934,6 +934,8 @@ function showMsg(text){
 }
 
 function showLoadingLocation(){
+
+  loadingStartTime = Date.now();   // 추가
 
   const modal = document.getElementById("msgModal");
   const box = document.getElementById("msgBox");
@@ -1628,7 +1630,7 @@ async function findNearestToilet(){
 
     pos=>{
 
-      closeMsg();
+      closeLoadingAfterMinTime();
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
 
@@ -1653,6 +1655,8 @@ async function findNearestToilet(){
 
 }
 
+
+
 async function findNearestDanger(){
 
   showLoadingLocation();
@@ -1665,7 +1669,7 @@ async function findNearestDanger(){
   navigator.geolocation.getCurrentPosition(
 
     pos=>{
-      closeMsg();
+      closeLoadingAfterMinTime();
 
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
@@ -2075,6 +2079,20 @@ err=>{
 
 });
 
+let loadingStartTime = 0;
+
+function closeLoadingAfterMinTime(){
+
+  const elapsed = Date.now() - loadingStartTime;
+  const minTime = 3000;   // 최소 3초
+
+  if(elapsed >= minTime){
+    closeMsg();
+  }else{
+    setTimeout(closeMsg, minTime - elapsed);
+  }
+
+}
 
 </script>
 
