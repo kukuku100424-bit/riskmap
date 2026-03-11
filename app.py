@@ -816,7 +816,7 @@ animation:dots 1.4s steps(3,end) infinite;
       <img src="/ci" class="ci-logo">
     </div>
 
-    <div class="brand-sub">자료제공: 행정안전부 생활안전지도(SafeMap)</div>
+    <div class="brand-sub">자료제공: 행정안전부(생활안전지도)</div>
   </div>
 
 </div>    
@@ -2376,5 +2376,6 @@ if __name__ == "__main__":
     if os.environ.get("RENDER_SERVICE_ID") is None:
         threading.Thread(target=shutdown_watcher, daemon=True).start()
         threading.Thread(target=open_preferred_browser, args=(url,), daemon=True).start()
+
 
     app.run(host="0.0.0.0", port=port, debug=False)
