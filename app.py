@@ -890,6 +890,8 @@ margin-top:8px;
 
 <script>
 
+
+
 const CATEGORY_COLORS = {
   "상습결빙지역": "#06b6d4",
   "공중화장실": "#f59e0b"
@@ -915,6 +917,18 @@ function showMsg(text){
   if(!modal || !txt) return;
 
   txt.innerText = text;
+  modal.style.display = "flex";
+
+}
+
+function showLoadingLocation(){
+
+  const modal = document.getElementById("msgModal");
+  const txt = document.getElementById("msgText");
+
+  if(!modal || !txt) return;
+
+  txt.innerText = "📍 위치 확인 중...";
   modal.style.display = "flex";
 
 }
@@ -1565,6 +1579,8 @@ if(userLat && userLng){
 
 async function findNearestToilet(){
 
+  showLoadingLocation();   // 추가
+
   if(!navigator.geolocation){
     showMsg("GPS를 지원하지 않는 기기입니다.");
     return;
@@ -1574,6 +1590,7 @@ async function findNearestToilet(){
 
     pos=>{
 
+      closeMsg();
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
 
@@ -1600,6 +1617,8 @@ async function findNearestToilet(){
 
 async function findNearestDanger(){
 
+  showLoadingLocation();
+
   if(!navigator.geolocation){
     showMsg("GPS를 지원하지 않는 기기입니다.");
     return;
@@ -1608,6 +1627,7 @@ async function findNearestDanger(){
   navigator.geolocation.getCurrentPosition(
 
     pos=>{
+      closeMsg();
 
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
@@ -1753,6 +1773,7 @@ async function findRadius(km){
 
     pos=>{
 
+      closeMsg();
       userLat = pos.coords.latitude;
       userLng = pos.coords.longitude;
 
