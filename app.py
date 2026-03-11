@@ -779,6 +779,18 @@ font-size:14px;
 margin-top:8px;
 }
 
+@keyframes floatChar{
+0%{transform:translateY(0);}
+50%{transform:translateY(-6px);}
+100%{transform:translateY(0);}
+}
+
+.char{
+width:80px;
+animation:floatChar 1.5s ease-in-out infinite;
+}
+
+
 </style>
 </head>
 <body>
@@ -924,15 +936,39 @@ function showMsg(text){
 function showLoadingLocation(){
 
   const modal = document.getElementById("msgModal");
-  const txt = document.getElementById("msgText");
+  const box = document.getElementById("msgBox");
 
-  if(!modal || !txt) return;
+  box.innerHTML = `
+  <div style="
+  display:flex;
+  align-items:center;
+  gap:14px;
+  ">
 
-  txt.innerText = "📍 위치 확인 중...";
+  <img src="/char_left" class="char">
+
+  <div style="
+  background:white;
+  padding:22px;
+  border-radius:14px;
+  width:220px;
+  text-align:center;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+  ">
+
+  <div style="font-size:15px;">
+  📍 위치 확인 중...
+  </div>
+
+  </div>
+
+  <img src="/char_right" class="char">
+
+  </div>
+  `;
+
   modal.style.display = "flex";
-
 }
-
 function closeMsg(){
   document.getElementById("msgModal").style.display = "none";
 }
@@ -2092,7 +2128,7 @@ justify-content:center;
 z-index:5000;
 ">
 
-<div style="
+<div id="msgBox" style="
 background:white;
 padding:22px;
 border-radius:14px;
@@ -2107,7 +2143,7 @@ margin-bottom:18px;
 line-height:1.5;
 "></div>
 
-<button onclick="closeMsg()" style="
+<button id="msgBtn" onclick="closeMsg()" style="
 background:#2563eb;
 border:none;
 color:white;
@@ -2121,11 +2157,17 @@ cursor:pointer;
 
 </div>
 </div>
-
 </body>
 </html>
 """
 
+@app.route("/char_left")
+def char_left():
+    return send_file("left.png", mimetype="image/png")
+
+@app.route("/char_right")
+def char_right():
+    return send_file("right.png", mimetype="image/png")
 
 @app.route("/ci")
 def ci():
