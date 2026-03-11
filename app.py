@@ -787,7 +787,7 @@ margin-top:8px;
 
 .char{
 width:80px;
-animation:floatChar 1.5s ease-in-out infinite;
+animation:floatChar 2.2s ease-in-out infinite;
 }
 
 
@@ -940,10 +940,12 @@ function showLoadingLocation(){
 
   box.innerHTML = `
   <div style="
-  display:flex;
-  align-items:center;
-  gap:14px;
-  ">
+display:flex;
+align-items:center;
+justify-content:center;
+gap:14px;
+flex-wrap:nowrap;
+">
 
   <img src="/char_left" class="char">
 
@@ -2132,7 +2134,7 @@ z-index:5000;
 background:white;
 padding:22px;
 border-radius:14px;
-width:280px;
+width:420px;
 text-align:center;
 box-shadow:0 10px 30px rgba(0,0,0,.25);
 ">
